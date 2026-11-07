@@ -1,0 +1,219 @@
+---
+title: "Model inference and evaluation"
+---
+
+import llmTk1 from '../../assets/image/llm_tk_1.png';
+import llmLogprob from '../../assets/image/llm_logprob.png';
+import llmGen from '../../assets/image/llm_gen.png';
+import chatTemplatesTokenisation from '../../assets/image/chat-templates-and-tokenisation.png';
+import Image from '../../../components/Image.astro';
+import Note from "../../../components/Note.astro";
+import Sidenote from "../../../components/Sidenote.astro";
+import Accordion from "../../../components/Accordion.astro";
+import HtmlEmbed from "../../../components/HtmlEmbed.astro";
+import Wide from "../../../components/Wide.astro";
+import Reference from "../../../components/Reference.astro";
+
+
+
+在本节中，我们来看模型的两个步骤：输入如何经过预处理后交给模型（`tokenization`），以及模型如何据此生成预测（`inference`）。
+
+<Sidenote> 如果你想进一步了解如何真正训练一个模型，应该去读 [Smol Training Guidebook！](https://huggingface.co/spaces/HuggingFaceTB/smol-training-playbook)</Sidenote>
+
+<HtmlEmbed src="d3-tokenization.html" frameless />
+
+<a id="tokenization"></a>
+
+### 分词
+输入文本（在推理时称为*提示词*）首先被切分成 *token*，即文本的小单位（可以是一个或多个字符，最大到词级别），每个 token 都关联一个数字。模型能解析的 token 全范围称为它的*词表*。
+
+<a id="basics-of-tokenization-why-and-how-do-we-tokenize-text"></a>
+
+#### 分词基础：我们为什么要分词，又如何分词？
+因为大语言模型实际上就是大型数学函数，它们吃的是数字，不是文本。
+
+假设你想把一句话转换成数字。你首先需要决定如何把句子切成小块，然后把每个小块映射到一个数字；这就是*分词*。
+
+过去，人们会尝试把文本的每个字符映射到它在字母表中的索引（`a` -> 1、`b` -> 2 等），这称为*基于字符的分词*（在字符之间切分）。在光谱的另一端，人们也尝试把每个词映射到它在词典中的索引（`a` -> 1、`aardvark` -> 2、`ab` -> 3 等），这称为*基于词的分词*（按空格切分——前提是你的语言有空格；如果没有，就会稍微麻烦一些）。
+
+这两种方法都有一个很强的局限：它们会从输入文本中移除信息。它们抹掉了你能从词形上看出的语义联系（例如 `dis similar`、`similar`、`similar ity`、`similar ly`），而这些正是我们希望模型保留的信息，好让它把相关的词联系起来。
+（另外，如果输入里突然出现一个全新的词会怎样？它拿不到数字，你的模型就没法处理它 😔 ）
+
+因此有人想到把词切成子词，并给这些子词分配索引（`dis`、`similar`、`ity`、`ly`）！
+
+最初这是用形态句法规则完成的（*形态句法*有点像构词的语法）。现在大多数人使用字节对编码（BPE），这是一种聪明的统计方法，根据子词在参考文本中的频率自动生成子词。
+
+所以总结一下：分词是一种把文本的小单位（可以是一个或多个字符，最大到词级别）映射到数字（类似索引）的方式。当你想处理文本时，你的输入文本（在推理时称为*提示词*）会被分词器切分成这些 *token*。模型或分词器能解析的 token 全范围称为它的*词表*。
+
+<Note title="延伸阅读：理解分词" emoji="📚" variant="warning">
+- ⭐ [🤗 NLP 课程中对不同分词方法的讲解](https://huggingface.co/learn/nlp-course/en/chapter2/4)
+- ⭐ [🤗 文档中关于分词的概念指南](https://huggingface.co/docs/transformers/en/tokenizer_summary)
+- [Jurafsky 关于分词（以及其他内容）的课程](https://web.stanford.edu/~jurafsky/slp3/2.pdf) - 跳到 2.5 和 2.6 节
+</Note>
+
+<Note title="延伸阅读：字节对编码" emoji="📚" variant="warning">
+我强烈建议读一篇更长的、讲解 BPE 工作原理的文章，因为它确实是现代 LLM 的基础。
+
+- ⭐ [🤗 NLP 课程中对 BPE 的讲解](https://huggingface.co/learn/nlp-course/en/chapter6/5)
+- [BPE 论文（针对文本的版本，因为该方法此前已存在于其他领域）](https://aclanthology.org/P16-1162/)
+</Note>
+
+构建一个分词器需要做的选择比人们预想的多。例如，要对数字进行分词，你不会想用基础的 BPE，但你是只索引 0 到 9、并假定其他所有数字都由数字组合而成？还是想把数字逐个存储，比如一直到十亿？
+
+当前知名的模型在这方面展示了多种做法，但哪种做法更有利于数学推理尚不清楚。这会影响一些数学评测（这也是几乎没有任何评测是纯算术的原因）。
+
+<Note title="延伸阅读：数字的分词" emoji="📚" variant="warning">
+
+- ⭐ [Yennie Jun 做的一个很好的可视化演示，展示 Anthropic、Meta、OpenAI 和 Mistral 模型的分词器如何切分数字](https://www.artfish.ai/p/how-would-you-tokenize-or-break-down) 
+- [Beren Millidge 写的数字分词历年演变简史](https://www.beren.io/2024-05-11-Integer-tokenization-is-now-much-less-insane/)
+</Note>
+
+<a id="how-tokenization-can-mess-up-your-evaluation"></a>
+
+#### 分词如何搞砸你的评测
+**管理微调模型、系统提示词和对话模板**
+
+2022 年之前，模型通常只是预训练：输入文本，输出文本，没有别的。然后，2023 年我们有了指令微调和对话模型，2025 年又有了推理模型。这意味着我们从使用原始文本，转向使用越来越多的格式。
+
+<Wide>
+<HtmlEmbed src="d3-tokenization-timeline.html" />
+</Wide>
+
+这意味着如果你不确保做到以下几点，不少模型的表现会很糟：
+1. 遵守模型期望的格式
+2. 如果你的模型需要系统提示词，在推理的最开始添加一个
+3. 在处理推理模型的答案之前，先移除其中的思考轨迹（通常可以用正则去掉 `<think>` 标签之间的内容）
+
+<Note title="关键：对话模板与分词" emoji="⚡" variant="danger">
+
+<Image src={chatTemplatesTokenisation} alt="空格、分词与模板" />
+
+不同的分词器在处理空格和特殊 token 时行为不同。看看这个[可视化](https://x.com/danielhanchen/status/1796952220619157694)，它展示了空格、分词和模板如何相互作用。永远不要假设分词器的行为完全相同！
+</Note>
+
+**注意句子起始和结束 token**
+
+一些预训练模型（比如 `Gemma` 系列）在推理时对[是否包含句子起始 token](https://github.com/EleutherAI/lm-evaluation-harness/pull/1465)极其敏感。你可能需要做几个实验，看看你的情况是否也会如此；如果这些 token 不在你的数据集里，评测时就要手动加上。
+
+你可能还会遇到这样的问题：模型不会像你预期的那样在句尾 token 处停下来。代码模型通常是以 `\n\t` 作为单个 token 训练的。这意味着在生成文本时，它们常常会一步就生成 `\n\t`。如果一个任务把 `\n` 定义为句尾 token（= 停止生成），那么当 `\n\t` 被预测为单个 token 时，模型就会在它之后继续生成，因为它与 `\n` 并不相同。但你实际上仍然希望模型停下来。在这些情况下，你要么需要更新句尾 token，要么定义一个机制，回溯最近这些 token 的字符表示，从而在事后停止（并截断）生成。
+
+**多语言性与分词**
+
+在看多语言评测时，你会遇到两个问题。
+
+第一，由于有些语言并不总是用空格作为词的分隔符（仅举几例：韩语、泰语、日语、中文），它们需要特定语言的分词器才能被正确切分，否则会影响它们在 [BLEU](https://github.com/EleutherAI/lm-evaluation-harness/issues/212)、F1 分数等指标上的得分。
+
+其次，分词器整体上可能对非英语语言不公平。训练 BPE 分词器时，你会使用想要覆盖的各语言的数据，但大多数时候，这些数据在语言之间是不平衡的（例如，英语数据比泰语或缅甸语多出一个数量级）。由于 BPE 分词器根据出现频率最高的词来构建词表 token，大多数长 token 都会是英语单词——而来自使用频率较低的语言的大多数词只会在字符级别被切分。这一效应导致多语言分词中的不公平：某些（频率较低，或*资源较少*的）语言需要多出几个数量级的 token，才能生成与英语等长的句子。
+
+<Wide>
+<Reference align="center" caption="Yennie Jun 关于跨语言分词问题的精彩演示">
+<iframe
+    className="card"
+    src="https://OpenEvals-tokenizers-languages.hf.space"
+    frameborder="0"
+    width="100%"
+    height="650"
+></iframe>
+</Reference>
+</Wide>
+
+如果你处于这种情况，那么评测中允许模型生成的 token 数也应当取决于语言，因为并非所有语言都会被分词成相近数量的 token。
+
+
+<Note title="延伸阅读：语言与分词" emoji="📚" variant="warning">
+- ⭐ [Yennie Jun 对跨语言分词问题的精彩拆解与演示](https://www.artfish.ai/p/all-languages-are-not-created-tokenized)：拆解本身非常清晰，嵌入的空间就来自她的工作。
+- ⭐ [Aleksandar Petrov 关于分词不公平性的演示](https://aleksandarpetrov.github.io/tokenization-fairness/)：我建议看一看 `Compare tokenization of sentences`，感受一下不同语言在推理成本上的差异。
+</Note>
+
+
+<a id="inference"></a>
+
+### 推理
+
+现在我们知道了如何把输入文本转换成 LLM 能解析的形式，接下来看看模型如何处理这段文本。
+
+基于这段输入文本，LLM 会在整个词表上生成下一个最可能 token 的概率分布。要得到连续的生成结果，我们可以取概率最高的 token（再加上一些随机性，让输出更有意思，具体多少视情况而定）作为下一个 token，然后重复这一操作，把新 token 当作提示词的结尾，依此类推。
+
+<Image src={llmTk1} alt="LLM 分词与预测过程" />
+
+
+<Note title="两种主要评测方法" emoji="🎯" variant="info">
+
+**对数似然评测**：给定一个提示词和一个（或若干个）答案，我的模型给出该答案的概率是多少？
+
+**生成式评测**：给定一个提示词，我的模型会生成什么文本？
+
+选择取决于你的任务（如下文所述）以及你的模型：API 背后的大多数模型不返回对数概率，因此你需要系统地使用生成式评测来评测它们。
+
+</Note>
+
+<a id="log-likelihood-evaluations"></a>
+
+#### 对数似然评测
+对于对数似然评测，我们想要的是在给定提示词时一个或若干个选项的条件概率——换句话说，给定一个输入，得到某个特定后续内容的可能性有多大？
+那么：
+- 我们把每个选项与提示词拼接起来，送入 LLM，它会根据前面的 token 输出每个 token 的 logits
+- 我们只保留最后的 logits（与选项 token 相关联的那些），并应用 log softmax 得到对数概率（取值范围是 `[-inf, 0]` 而不是 `[0-1]`）
+- 然后我们把各个 token 的对数概率求和，得到整个选项的对数概率
+- 最后我们可以基于选项长度做一次归一化
+
+<Image src={llmLogprob} alt="LLM 对数似然评测过程" />
+
+这让我们可以应用以下指标之一：
+- 得到模型在若干选项中的偏好答案，如上图所示。（*然而，这可能让那些本来会自由生成其他内容的模型占便宜，比如图中的 `Zygote`。*）
+- 检验单个选项的概率是否高于 0.5
+- 研究模型校准。一个校准良好的模型，是指正确答案具有最高概率的模型。
+<Sidenote>
+要进一步了解校准，你可以看 Anthropic 的[这篇论文](https://arxiv.org/abs/2207.05221)，它讲了校准是什么、如何检测，以及如何训练模型使其校准良好；还可以看[这篇论文](https://arxiv.org/abs/2311.14648)，它讨论了校准的一些可能局限）。
+</Sidenote>
+
+
+<Note>
+一道多项选择题的答案也可以用自由形式的生成式评测来表达！因此，你有时会看到对任务**形式**（formulation）的提法。
+
+有三种常见任务形式：
+- **多项选择格式（MCF）**：我们比较各选项索引的似然，选项在提示词中显式给出，并以 A/B/C/D 为前缀（如 MMLU 中那样）
+- **完形填空形式（CF）**：我们比较不同选项的似然，但不把它们提供在提示词中
+- **自由形式生成（FG）**：我们评测给定提示词下贪心生成的准确性
+
+FG 需要大量潜在知识，在短期的预训练消融实验中通常对模型来说太难。因此，在运行小规模消融实验时，我们通常聚焦于多项选择形式（MCF 或 CF）。不过，对于后训练模型，FG 成为主要形式，因为我们要评测的正是模型能否真正生成有用的回答。
+不过，研究也表明，模型在训练早期难以应对 MCF，只有在大量训练之后才学会这项技能，因此 CF 能提供更好的早期信号。所以我们建议在小规模消融中使用 CF，并在主实验中纳入 MCF，因为一旦模型越过某个阈值、为 MCF 带来足够高的信噪比，MCF 就能提供更好的训练中期信号。
+再补充一点：在 CF 这类序列似然评测中，为了给模型的答案打分，我们把准确率计算为“正确答案具有最高的、按字符/token 数归一化后的对数概率”的问题所占的百分比。这种归一化可以防止对较短答案的偏好。
+
+<Sidenote>
+MMLU MCF 变为非随机表现的时点取决于模型规模和训练数据。对于 7B 的 transformer，OLMES 论文发现模型在 500B token 之后才开始表现出非随机的性能。对于 1.7B 模型，我们在 SmolLM2 中发现这发生在 6T token 之后。
+</Sidenote>
+
+</Note>
+
+<Accordion title="是否应该始终把上下文和选项一起分词？"> 
+在多项选择 MCQA 评测中，通常你会希望把上下文和选项一起分词，因为这样生成的 token 序列对模型来说更可能、也更自然。 
+
+然而，有些分词器（例如 [Llama 的那个](https://github.com/EleutherAI/lm-evaluation-harness/pull/531#issuecomment-1595586257)）并不满足 `tok(context + choice) = tok(context) + tok(choice)`（它们会增删空格）。这意味着只比较各选项的对数概率并不简单，因为上下文的 token 可能“渗出”到选项里，把比较搞乱。
+
+举个具体的例子，假设你的词表基础 token 是字符 `C1`、`C2`、`C3`，而 `C1C2` 恰好也是 BPE 过程中学到的一个单独 token。 
+
+假设你的上下文是 C1，选项是 C2 和 C3。
+如果你把上下文和选项一起分词，你比较的是 `C1C2`（一个 token）与 `C1+C3`（两个 token）。即使你按长度对对数概率做归一化，你比较的也不是同一个东西。 
+而先分别对上下文和选项分词再比较，意味着你比较的是 `C1+C2` 与 `C1+C3`。但既然 `C1C2` 是一个 token，`C1+C2` 在你的编码器所见过的那类数据中大概很罕见，因此对模型来说这是一个不太可能的连续序列，这会扰乱你的对数概率。
+
+如果你的模型是这种情况，解决方案通常是选择“最不坏”的那个选项，比较可比较的东西：分别计算上下文和选项的 token，然后在移除可能被添加的特殊句首/句尾 token 之后把它们拼接起来。
+</Accordion>
+
+<a id="generative-evaluations"></a>
+
+#### 生成式评测
+在生成式评测中，我们要的是模型在给定输入提示词时生成的文本。 
+
+它是通过自回归方式得到的：我们把提示词传给模型，查看最可能的下一个 token，把它选为模型“生成的第一个 token”，然后重复，直到达到某个结束生成的条件（最大长度、用于停止生成的特定 token 等）。模型生成的所有 token 都被视为它对提示词的答案。
+
+<Image src={llmGen} alt="LLM 生成式评测流程" />
+
+然后我们可以把这次生成与参考文本进行比较，并对两者之间的距离打分（使用精确匹配这类简单指标、BLEU 这类更复杂的指标，或者以模型作为裁判）。 
+
+<Note title="延伸阅读" emoji="📚" variant="warning">
+- ⭐ [关于评测 MMLU 的几种方式的博客](https://huggingface.co/blog/open-llm-leaderboard-mmlu) ，作者是我在 Hugging Face 的团队。如果你想深入了解多项选择对数似然评测与生成式评测之间的差异，包括这些差异对分数变化意味着什么，我推荐读一读（以上插图来自该博客，由 Thom Wolf 制作）
+- ⭐ [对上述推理方法的一个漂亮的数学形式化](https://arxiv.org/abs/2405.14782v2)，来自 EleutherAI。直接跳到附录。
+</Note>
+
+

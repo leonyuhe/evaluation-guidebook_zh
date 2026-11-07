@@ -1,0 +1,5 @@
+task,metric,avg_spearman,avg_kendall_tau_a,max_std,max_std_step,min_std,min_std_step,mean_std,avg_snr,max_n_std
+lighteval|frenchbench_arc_fra_cf:challenge|0,acc,,-1.0,0.0,12000.0,0.0,12000.0,0.0,,
+lighteval|frenchbench_arc_fra_cf:challenge|0,acc_norm,,-1.0,0.0,12000.0,0.0,12000.0,0.0,,
+lighteval|frenchbench_arc_fra_cf:challenge|0,acc_norm_token,,-1.0,0.0,12000.0,0.0,12000.0,0.0,,
+lighteval|frenchbench_arc_fra_cf:challenge|0,acc_norm_pmi,,-1.0,0.0,12000.0,0.0,12000.0,0.0,,

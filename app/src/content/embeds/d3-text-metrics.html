@@ -1,0 +1,497 @@
+<div class="d3-text-metrics"></div>
+
+<style>
+  .d3-text-metrics {
+    font-family: var(--default-font-family);
+    background: transparent;
+    padding: 0;
+    width: 100%;
+    position: relative;
+  }
+
+  .d3-text-metrics .example-text {
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--text-color);
+    font-family: monospace;
+    margin: 8px 0;
+    padding: 10px 12px;
+    background: var(--surface-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+  }
+
+  .d3-text-metrics .label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--muted-color);
+    margin-right: 8px;
+  }
+
+  .d3-text-metrics .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 16px 0;
+  }
+
+  .d3-text-metrics .metric-box {
+    padding: 12px;
+    background: var(--surface-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    transition: border-color 0.2s;
+  }
+
+  .d3-text-metrics .metric-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 6px;
+  }
+
+  .d3-text-metrics .metric-score {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 4px;
+  }
+
+  .d3-text-metrics .metric-detail {
+    font-size: 11px;
+    color: var(--muted-color);
+    line-height: 1.4;
+  }
+
+  .d3-text-metrics .visualization {
+    margin-top: 8px;
+    padding: 8px;
+    background: oklch(from var(--primary-color) calc(l + 0.45) c h / 0.06);
+    border-radius: 4px;
+    font-size: 10px;
+  }
+
+  [data-theme="dark"] .d3-text-metrics .visualization {
+    background: oklch(from var(--primary-color) calc(l + 0.20) c h / 0.1);
+  }
+
+  .d3-text-metrics .token {
+    display: inline-block;
+    padding: 2px 5px;
+    margin: 2px;
+    border-radius: 3px;
+    font-size: 10px;
+    background: var(--surface-bg);
+    border: 1px solid var(--border-color);
+  }
+
+  .d3-text-metrics .token.match {
+    background: oklch(from var(--primary-color) calc(l + 0.35) c h / 0.35);
+    border-color: var(--primary-color);
+    font-weight: 600;
+  }
+
+  [data-theme="dark"] .d3-text-metrics .token.match {
+    background: oklch(from var(--primary-color) calc(l + 0.25) c h / 0.4);
+  }
+
+  .d3-text-metrics .controls {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+
+  .d3-text-metrics select {
+    font-size: 12px;
+    padding: 6px 24px 6px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--surface-bg);
+    color: var(--text-color);
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+    background-size: 12px;
+  }
+
+  @media (max-width: 768px) {
+    .d3-text-metrics .metrics-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  (() => {
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-text-metrics'))) {
+        const candidates = Array.from(document.querySelectorAll('.d3-text-metrics'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+
+      if (!container) return;
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Single example: Cat Evaluator
+      const reference = "My cat loves doing model evaluation and testing benchmarks";
+      const prediction = "My cat enjoys model evaluation and testing models";
+
+      const tokenize = (text) => text.toLowerCase().trim().split(/\s+/);
+
+      const getNgrams = (tokens, n) => {
+        const ngrams = [];
+        for (let i = 0; i <= tokens.length - n; i++) {
+          ngrams.push(tokens.slice(i, i + n));
+        }
+        return ngrams;
+      };
+
+      const computeExactMatch = (pred, ref) => {
+        return pred.toLowerCase().trim() === ref.toLowerCase().trim() ? 1.0 : 0.0;
+      };
+
+      const computeBleu = (pred, ref) => {
+        const predTokens = tokenize(pred);
+        const refTokens = tokenize(ref);
+        if (predTokens.length === 0) return { score: 0, details: [] };
+
+        const details = [];
+        const precisions = [];
+
+        for (let n = 1; n <= 3; n++) {
+          const predNgrams = getNgrams(predTokens, n);
+          const refNgrams = getNgrams(refTokens, n);
+          if (predNgrams.length === 0) {
+            precisions.push(0);
+            continue;
+          }
+
+          const refCounts = {};
+          refNgrams.forEach(ng => {
+            const key = ng.join(' ');
+            refCounts[key] = (refCounts[key] || 0) + 1;
+          });
+
+          let matches = 0;
+          const matchedNgrams = [];
+          const predCounts = {};
+
+          predNgrams.forEach(ng => {
+            const key = ng.join(' ');
+            predCounts[key] = (predCounts[key] || 0) + 1;
+            if (refCounts[key] && predCounts[key] <= refCounts[key]) {
+              matches++;
+              if (!matchedNgrams.includes(key)) matchedNgrams.push(key);
+            }
+          });
+
+          const precision = matches / predNgrams.length;
+          precisions.push(precision);
+          details.push({ n, matches, total: predNgrams.length, matchedNgrams });
+        }
+
+        const validPrecisions = precisions.filter(p => p > 0);
+        const score = validPrecisions.length > 0
+          ? Math.exp(validPrecisions.reduce((sum, p) => sum + Math.log(p), 0) / validPrecisions.length)
+          : 0;
+
+        return { score, details };
+      };
+
+      const computeRouge1 = (pred, ref) => {
+        const predTokens = tokenize(pred);
+        const refTokens = tokenize(ref);
+
+        const predCounts = {};
+        const refCounts = {};
+        predTokens.forEach(t => predCounts[t] = (predCounts[t] || 0) + 1);
+        refTokens.forEach(t => refCounts[t] = (refCounts[t] || 0) + 1);
+
+        let overlap = 0;
+        const matchedTokens = [];
+        Object.keys(refCounts).forEach(token => {
+          if (predCounts[token]) {
+            overlap += Math.min(predCounts[token], refCounts[token]);
+            matchedTokens.push(token);
+          }
+        });
+
+        const recall = refTokens.length > 0 ? overlap / refTokens.length : 0;
+        const precision = predTokens.length > 0 ? overlap / predTokens.length : 0;
+        const f1 = (precision + recall) > 0 ? 2 * precision * recall / (precision + recall) : 0;
+
+        return { score: f1, recall, precision, matchedTokens };
+      };
+
+      const computeRouge2 = (pred, ref) => {
+        const predTokens = tokenize(pred);
+        const refTokens = tokenize(ref);
+
+        const predBigrams = getNgrams(predTokens, 2);
+        const refBigrams = getNgrams(refTokens, 2);
+
+        if (refBigrams.length === 0) {
+          return { score: 0, recall: 0, precision: 0, matchedBigrams: [] };
+        }
+
+        const predCounts = {};
+        const refCounts = {};
+        predBigrams.forEach(bg => {
+          const key = bg.join(' ');
+          predCounts[key] = (predCounts[key] || 0) + 1;
+        });
+        refBigrams.forEach(bg => {
+          const key = bg.join(' ');
+          refCounts[key] = (refCounts[key] || 0) + 1;
+        });
+
+        let overlap = 0;
+        const matchedBigrams = [];
+        Object.keys(refCounts).forEach(bigram => {
+          if (predCounts[bigram]) {
+            overlap += Math.min(predCounts[bigram], refCounts[bigram]);
+            matchedBigrams.push(bigram);
+          }
+        });
+
+        const recall = refBigrams.length > 0 ? overlap / refBigrams.length : 0;
+        const precision = predBigrams.length > 0 ? overlap / predBigrams.length : 0;
+        const f1 = (precision + recall) > 0 ? 2 * precision * recall / (precision + recall) : 0;
+
+        return { score: f1, recall, precision, matchedBigrams };
+      };
+
+      const computeEditDistanceWithOps = (s1, s2) => {
+        const m = s1.length;
+        const n = s2.length;
+
+        // Create DP table
+        const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+
+        // Initialize
+        for (let i = 0; i <= m; i++) dp[i][0] = i;
+        for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+        // Fill DP table
+        for (let i = 1; i <= m; i++) {
+          for (let j = 1; j <= n; j++) {
+            if (s1[i - 1] === s2[j - 1]) {
+              dp[i][j] = dp[i - 1][j - 1];
+            } else {
+              dp[i][j] = 1 + Math.min(
+                dp[i - 1][j],     // delete
+                dp[i][j - 1],     // insert
+                dp[i - 1][j - 1]  // substitute
+              );
+            }
+          }
+        }
+
+        // Traceback to find operations
+        const operations = [];
+        let i = m, j = n;
+
+        while (i > 0 || j > 0) {
+          if (i === 0) {
+            operations.unshift({ type: 'insert', value: s2[j - 1], pos: j });
+            j--;
+          } else if (j === 0) {
+            operations.unshift({ type: 'delete', value: s1[i - 1], pos: i });
+            i--;
+          } else if (s1[i - 1] === s2[j - 1]) {
+            i--;
+            j--;
+          } else {
+            const deleteCost = dp[i - 1][j];
+            const insertCost = dp[i][j - 1];
+            const substituteCost = dp[i - 1][j - 1];
+
+            if (substituteCost <= deleteCost && substituteCost <= insertCost) {
+              operations.unshift({ type: 'substitute', from: s1[i - 1], to: s2[j - 1], pos: i });
+              i--;
+              j--;
+            } else if (deleteCost <= insertCost) {
+              operations.unshift({ type: 'delete', value: s1[i - 1], pos: i });
+              i--;
+            } else {
+              operations.unshift({ type: 'insert', value: s2[j - 1], pos: j });
+              j--;
+            }
+          }
+        }
+
+        return { distance: dp[m][n], operations };
+      };
+
+      const computeTer = (pred, ref) => {
+        const predTokens = tokenize(pred);
+        const refTokens = tokenize(ref);
+        const result = computeEditDistanceWithOps(predTokens, refTokens);
+        const score = refTokens.length > 0 ? result.distance / refTokens.length : 1.0;
+        return {
+          score,
+          edits: result.distance,
+          refLength: refTokens.length,
+          operations: result.operations
+        };
+      };
+
+      const computeBleurtMock = (pred, ref) => {
+        const predTokens = new Set(tokenize(pred));
+        const refTokens = new Set(tokenize(ref));
+        const intersection = new Set([...predTokens].filter(t => refTokens.has(t)));
+        const union = new Set([...predTokens, ...refTokens]);
+        const jaccard = union.size > 0 ? intersection.size / union.size : 0;
+        return { score: jaccard * 1.5 - 0.5, jaccard };
+      };
+
+      const render = () => {
+        const exactMatch = computeExactMatch(prediction, reference);
+        const bleu = computeBleu(prediction, reference);
+        const rouge1 = computeRouge1(prediction, reference);
+        const rouge2 = computeRouge2(prediction, reference);
+        const ter = computeTer(prediction, reference);
+        const bleurt = computeBleurtMock(prediction, reference);
+
+        container.innerHTML = `
+          <div class="example-text">
+            <span class="label">REF:</span>${reference}
+          </div>
+          <div class="example-text">
+            <span class="label">PRED:</span>${prediction}
+          </div>
+
+          <div class="metrics-grid">
+            <!-- Row 1: Exact Match, TER, BLEURT -->
+            <div class="metric-box">
+              <div class="metric-name">Exact Match</div>
+              <div class="metric-score">${exactMatch.toFixed(1)}</div>
+              <div class="metric-detail">Binary: 1 or 0</div>
+              <div class="visualization">
+                <div style="margin: 4px 0; font-size: 14px;">
+                  ${exactMatch === 1 ? '✓ Strings are identical' : '✗ Strings differ'}
+                </div>
+                <div style="margin-top: 6px; font-size: 9px; color: var(--muted-color);">
+                  Most strict metric - no partial credit
+                </div>
+              </div>
+            </div>
+
+            <div class="metric-box">
+              <div class="metric-name">Translation Error Rate</div>
+              <div class="metric-score">${ter.score.toFixed(3)}</div>
+              <div class="metric-detail">Edit distance normalized</div>
+              <div class="visualization">
+                <div style="margin: 4px 0;">
+                  <strong>${ter.edits}</strong> edits / <strong>${ter.refLength}</strong> words = <strong>${ter.score.toFixed(3)}</strong>
+                </div>
+                ${ter.operations.length > 0 ? `
+                  <div style="margin-top: 8px; font-size: 10px;">
+                    <div style="margin-bottom: 4px; color: var(--muted-color);">Edit operations:</div>
+                    ${ter.operations.map((op, idx) => {
+                      if (op.type === 'substitute') {
+                        return `<div style="margin: 2px 0;">• Replace "<strong>${op.from}</strong>" → "<strong>${op.to}</strong>"</div>`;
+                      } else if (op.type === 'delete') {
+                        return `<div style="margin: 2px 0;">• Delete "<strong>${op.value}</strong>"</div>`;
+                      } else if (op.type === 'insert') {
+                        return `<div style="margin: 2px 0;">• Insert "<strong>${op.value}</strong>"</div>`;
+                      }
+                    }).join('')}
+                  </div>
+                ` : ''}
+                <div style="margin-top: 6px; font-size: 9px; color: var(--muted-color);">
+                  Lower is better (0 = identical)
+                </div>
+              </div>
+            </div>
+
+            <div class="metric-box">
+              <div class="metric-name">BLEURT</div>
+              <div class="metric-score">${bleurt.score.toFixed(3)}</div>
+              <div class="metric-detail">Semantic similarity</div>
+              <div class="visualization">
+                <div style="margin-top: 6px; font-size: 9px; color: var(--muted-color); font-style: italic;">
+                  BLEURT uses BERT embeddings learned from real text.
+                </div>
+              </div>
+            </div>
+
+            <!-- Row 2: BLEU, ROUGE-1, ROUGE-2 -->
+            <div class="metric-box">
+              <div class="metric-name">BLEU</div>
+              <div class="metric-score">${bleu.score.toFixed(3)}</div>
+              <div class="metric-detail">N-gram precision-based</div>
+              <div class="visualization">
+                ${bleu.details.map(d => `
+                  <div style="margin: 4px 0;">
+                    <strong>${d.n}-gram:</strong> ${d.matches}/${d.total} (${(d.matches/d.total*100).toFixed(0)}%)
+                  </div>
+                  <div style="margin: 2px 0;">
+                    ${d.matchedNgrams.slice(0, 3).map(ng => `<span class="token match">${ng}</span>`).join('')}
+                    ${d.matchedNgrams.length > 3 ? `<span style="color: var(--muted-color); font-size: 10px;">+${d.matchedNgrams.length - 3} more</span>` : ''}
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <div class="metric-box">
+              <div class="metric-name">ROUGE-1</div>
+              <div class="metric-score">${rouge1.score.toFixed(3)}</div>
+              <div class="metric-detail">Unigram-based F1</div>
+              <div class="visualization">
+                <div style="margin: 4px 0;">
+                  <strong>Recall:</strong> ${(rouge1.recall * 100).toFixed(0)}% | <strong>Precision:</strong> ${(rouge1.precision * 100).toFixed(0)}%
+                </div>
+                <div style="margin-top: 6px; font-size: 9px; color: var(--muted-color);">
+                  Matched unigrams:
+                </div>
+                ${rouge1.matchedTokens.length > 0 ? `
+                  <div style="margin: 2px 0;">
+                    ${rouge1.matchedTokens.slice(0, 5).map(t => `<span class="token match">${t}</span>`).join('')}
+                    ${rouge1.matchedTokens.length > 5 ? `<span style="color: var(--muted-color); font-size: 10px;">+${rouge1.matchedTokens.length - 5} more</span>` : ''}
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+
+            <div class="metric-box">
+              <div class="metric-name">ROUGE-2</div>
+              <div class="metric-score">${rouge2.score.toFixed(3)}</div>
+              <div class="metric-detail">Bigram-based F1</div>
+              <div class="visualization">
+                <div style="margin: 4px 0;">
+                  <strong>Recall:</strong> ${(rouge2.recall * 100).toFixed(0)}% | <strong>Precision:</strong> ${(rouge2.precision * 100).toFixed(0)}%
+                </div>
+                <div style="margin-top: 6px; font-size: 9px; color: var(--muted-color);">
+                  Matched bigrams:
+                </div>
+                ${rouge2.matchedBigrams.length > 0 ? `
+                  <div style="margin: 2px 0;">
+                    ${rouge2.matchedBigrams.slice(0, 3).map(bg => `<span class="token match">${bg}</span>`).join('')}
+                    ${rouge2.matchedBigrams.length > 3 ? `<span style="color: var(--muted-color); font-size: 10px;">+${rouge2.matchedBigrams.length - 3} more</span>` : ''}
+                  </div>
+                ` : '<div style="margin: 2px 0; font-size: 10px; color: var(--muted-color);">No bigram matches</div>'}
+              </div>
+            </div>
+          </div>
+        `;
+      };
+
+      render();
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
+    } else {
+      bootstrap();
+    }
+  })();
+</script>

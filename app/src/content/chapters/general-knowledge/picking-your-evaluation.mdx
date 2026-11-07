@@ -1,0 +1,239 @@
+---
+title: "Picking good automatic evaluations for pretraining"
+---
+
+import Note from "../../../components/Note.astro";
+import Sidenote from "../../../components/Sidenote.astro";
+import HtmlEmbed from "../../../components/HtmlEmbed.astro";
+
+
+
+在某些情况下，你并不想“仅仅”事后复现已有的分数，而是需要了解模型在训练过程中表现如何。此时你需要的评测具有与评估模型最终表现的评测不同的性质，因为你需要那些即使在模型还不够好时也能提供良好信号的任务。
+
+因此，FineWeb 团队设计了一种方法，用于在 9 种语言中选出最适合预训练消融实验的评测——让我们听听他们明智的建议。
+
+对于这些语言，我们收集并实现了能找到的所有可用任务，共 **185 个任务**。然后，我们以两个主要目标开始任务选择：确保**评测多样性**，以及确保每个任务在预训练期间提供**可靠的信号**。
+
+对于评测多样性，我们旨在评估广泛的模型能力，包括：
+
+- **阅读理解（RC）**：理解所提供的上下文并据此回答问题。
+- **常识（GK）**：在没有额外上下文的情况下回答各领域的事实性问题。
+- **自然语言理解（NLU）**：理解所提供输入的语义。
+- **常识推理（RES）**：展示执行需要具身知识的简单推理的能力。
+- **生成式任务**：在没有多项选择选项“帮助”的情况下用目标语言生成文本的能力。
+
+我们认为，如果任务能给出可靠的分数，就说明它提供了可靠的信号。这意味着分数应高于随机基线、随训练推进而上升、在不同随机种子间波动较小，并在每个训练步上给出稳定的模型排名<d-footnote>针对规模相近、使用相同超参数并在相同数据量上训练的模型。</d-footnote>。
+
+为全面考察这些任务提供的信号，我们针对每种语言训练了多个 1.5B 参数模型，每个模型使用 30B token，取自五个最大的公开多语言网络数据集所支持语言的子集。这些模型使用相同的超参数和分词器训练。随后，我们在固定的 checkpoint 间隔上，用收集到的任务对它们进行评测（在零样本设置下，不使用指令，也不使用系统提示词）。
+
+由于任务实现经过多轮迭代，这一过程对每个任务都需要多次评测运行，最终总共消耗了 **73 000 GPU 小时** 🔥！
+
+在训练了 **49 个模型**之后，我们终于可以定义对我们而言**可靠信号**意味着什么！
+
+<a id="monotonicity"></a>
+
+#### 单调性
+
+我们对任务的核心要求之一是：它能够从训练数据中被学到，并且**这种学习能随着训练推进被逐步观察到**。如果随着时间推移没有这种提升，就无法确定未来是否会出现提升。
+
+为衡量这一点，我们使用 **Spearman 秩相关**来量化训练步数与分数之间的相关性。即使分数不随步数线性变化，Spearman 秩相关也能刻画单调性。我们要求每个任务在所有模型训练运行上的平均相关系数至少为 0.5。
+
+
+<HtmlEmbed 
+  src="d3-two-lines-chart.html" 
+  config={{ 
+    charts: [
+      { 
+        title: "✅ Good monotonicity: mlmm_hellaswag_fra_cf [fr]",
+        language: "French",
+        task: "mlmm_hellaswag_fra_cf",
+        metric: "acc_norm_token"
+      },
+      { 
+        title: "❌ Bad monotonicity: mlmm_truthfulqa_ara_cf:mc1 [ar]",
+        language: "Arabic",
+        task: "mlmm_truthfulqa_ara_cf:mc1",
+        metric: "acc_norm_token"
+      }
+    ],
+    statLabel: "Monotonicity",
+    smoothing: true,
+    smoothingWindow: 5,
+    smoothingCurve: "monotoneX",
+    xAxisLabel: "Training Tokens (billions)",
+    yAxisLabel: "Score"
+  }} 
+  frameless={true}
+/>
+
+<a id="low-noise"></a>
+
+#### 低噪声
+
+比较模型在任务上的表现时，我们需要考虑差异究竟来自**评测噪声，还是真实的性能差异**。
+
+噪声可能来自模型训练中的随机过程，例如随机 token 采样、数据打乱或模型初始化（[Madaan et al., 2024](https://arxiv.org/abs/2406.10229)）。为衡量每个任务对这种噪声的敏感程度，我们使用不同的随机种子，在我们自己的单语语料（各语言未经过滤的 CommonCrawl 数据）上额外训练了四个模型。
+
+对每个任务，我们计算了：
+
+1. 首先，计算每个训练步（大约每 1B token）上模型分数的标准差，我们称之为 **per-step-std**。
+2. 然后，为得到全局的波动性度量，我们对所有 per-step-std 值取平均，得到整个训练过程中的 **avg-std**。我们假设该值是跨模型架构和训练数据集的上界（因为它由在“更脏”的数据集上训练的模型近似得出，因而波动性更高）。
+3. 最后，我们计算**信噪比**（SNR），作为任务波动性的主要指标。SNR 的计算方式为：所有运行在 30B token 时的平均分数除以 avg-std。该指标衡量整体分数相对于分数波动（噪声）的显著程度。
+
+我们希望每个任务的 SNR > 20。这条规则的唯一例外是生成式任务，它们的 SNR 通常相对较低，但仍值得纳入，因为它们能揭示模型在被要求进行无约束生成（没有答案选项）时的行为。在多语言场景下这一点尤其重要，因为某些在多种语言上训练的模型可能在任务上取得高分，却在生成式任务中突然用错误的语言回答！
+
+<HtmlEmbed 
+  src="d3-two-lines-chart.html" 
+  config={{ 
+    charts: [
+      { 
+        title: "✅ Good SNR: xstory_cloze_tel_cf [te]",
+        language: "Telugu",
+        task: "xstory_cloze_tel_cf",
+        metric: "acc_norm_token"
+      },
+      { 
+        title: "❌ Bad SNR: tydiqa_tel [te]",
+        language: "Telugu",
+        task: "tydiqa_tel",
+        metric: "prefix_match"
+      }
+    ],
+    statLabel: "SNR",
+    groupSeeds: false,
+    smoothing: true,
+    smoothingWindow: 5,
+    smoothingCurve: "monotoneX",
+    xAxisLabel: "Training Tokens (billions)",
+    yAxisLabel: "Score"
+  }} 
+  frameless={true}
+/>
+
+<Note>
+假设模型性能在不同随机种子间服从正态分布，我们希望基准运行的表现至少比基准随机基线高 3 个 final-std。这意味着 99.85% 的种子分数高于随机基线（形式上，基准运行的表现 - 基准随机基线 > 3 * final-std）。
+</Note>
+
+<a id="non-random-performance"></a>
+
+#### 非随机性能
+
+许多模型能力是在训练后期才获得的，因此**许多任务**（尤其是更难的、比如与数学相关的任务）**会在很长一段时间内只表现出基线水平**。这些任务虽然有用，但并不适合早期的预训练评测，**我们不希望在该场景中保留它们**。
+
+我们首先计算任务的随机基线表现（对多项选择题，为所有样本的 1/n_choices 之和；对生成式评测，为零）。然后计算任务相对基线的距离，即所有模型中的最高分减去基线。
+
+
+<HtmlEmbed 
+  src="d3-two-lines-chart.html" 
+  config={{ 
+    charts: [
+      { 
+        title: "✅ Non-random: agieval_zho_cf/acc_pmi [zh]",
+        language: "Chinese",
+        task: "agieval_zho_cf:_average",
+        metric: "acc_norm_pmi"
+      },
+      { 
+        title: "❌ Random perf: agieval_zho_cf/acc [zh]",
+        language: "Chinese",
+        task: "agieval_zho_cf:_average",
+        metric: "acc"
+      }
+    ],
+    statLabel: "Non-Randomness",
+    smoothing: true,
+    smoothingWindow: 5,
+    smoothingCurve: "monotoneX",
+    xAxisLabel: "Training Tokens (billions)",
+    yAxisLabel: "Score"
+  }} 
+  frameless={true}
+/>
+
+<a id="model-ordering-consistency"></a>
+
+#### 模型排序一致性
+
+别忘了，这些评测的主要目标是比较模型和数据集！
+
+未来，我们希望用这些评测为完整的模型预训练挑选最佳数据集。这意味着**我们的任务对用极少 token 训练的数据集所做的排序（我们通常在 30B token 上运行数据消融实验），应当与它们训练更长时间、经过显著更多步之后的排序一致。**
+
+换句话说，我们希望任务具备**对预训练期间未来表现的预测能力**：如果预训练数据集 A 在 30B token 时优于预训练数据集 B，我们希望这一趋势能延续到 300B token。
+
+要证明这一点本质上是不可能的，但存在一个我们可以检验的必要前提条件：结果若要在更大规模上保持一致，首先必须在较小规模上也表现出一致性！
+
+为衡量任务排序的这种一致性，我们计算了每两个相邻训练步之间模型排名的平均 **Kendall's Tau**。我们只考虑预训练 15B token 之后的训练步，因为发现该范围之前的排序噪声极大。该指标取值高，说明排序随训练推进保持一致。
+
+<Note>
+我们对这一属性没有严格的最低值要求，而是用它来在任务之间建立比较。
+</Note>
+
+<HtmlEmbed 
+  src="d3-two-lines-chart.html" 
+  config={{ 
+    charts: [
+      { 
+        title: "✅ Good ordering: xcsqa_ara_cf [ar]",
+        language: "Arabic",
+        task: "xcsqa_ara_cf",
+        metric: "acc_norm_token"
+      },
+      { 
+        title: "❌ Bad ordering: thai_exams_tha_cf [th]",
+        language: "Thai",
+        task: "thai_exams_tha_cf:_average",
+        metric: "acc_norm_token"
+      }
+    ],
+    statLabel: "Kendall's Tau",
+    smoothing: true,
+    smoothingWindow: 5,
+    smoothingCurve: "monotoneX",
+    xAxisLabel: "Training Tokens (billions)",
+    yAxisLabel: "Score"
+  }} 
+  frameless={true}
+/>
+
+
+<a id="metrics"></a>
+
+#### 指标
+
+由于多项选择任务中 CF 的目标就是选项本身，每个目标的 token 数、字符数以及无条件概率（在没有上下文前缀的情况下生成该选项的概率）都可能不同。
+
+<Note>例如，不做归一化地衡量准确率，会让模型偏好 token 数更少的答案。</Note>
+
+为处理这一点，我们考虑了以下几种准确率变体：
+
+- **准确率**：
+  `acc` = $\underset{i}{\arg\max}(ln(P (a_i|q)))$
+- **按字符长度归一化的准确率**：
+  `acc_char` = $\underset{i}{\arg\max}\frac{ln(P (a_i|q))}{num\_characters(a_i)}$
+- **按 token 长度归一化的准确率**：
+  `acc_token` = $\underset{i}{\arg\max}\frac{ln(P (a_i|q))}{num\_tokens(a_i)}$
+- **PMI 准确率**：
+  `acc_pmi` = $\underset{i}{\arg\max}ln\frac{P (a_i|q)}{P (a_i|u)}$，其中 $u =$ ''Answer:''
+
+其中 $a_i$ 是第 $i$ 个答案选项，$q$ 是问题提示词，$P (a_i|q)$ 是 $a_i$ 紧随 $q$ 出现的概率。更多细节见 [Gu et al., 2024](https://arxiv.org/abs/2406.08446) 和 [Biderman et al., 2024](https://arxiv.org/abs/2405.14782)。
+
+<Note>`acc_pmi` 指标衡量的是：与完全没有上下文相比，模型在获得问题上下文时预测 A_i 的可能性高出多少。当正确选项包含通常不太可能出现的 token，从而使模型不太愿意选择该答案时，这一指标会很有用。</Note>
+
+另一方面，对于生成式任务，我们使用了以下指标：
+
+- `prefix_match`：只需答案前缀匹配的精确匹配
+- `f1`：基于使用词级分词器抽取的预测词与标准答案词计算的 F1 分数
+
+对这两个生成式指标，都会做少量预处理：去除冠词和标点，并将文本转为小写。
+
+选择最佳评测指标被证明是一项**颇具挑战的任务**。不仅没有任何一个指标能始终优于其他指标，我们还常常遇到这样的情形：某个指标的单调性更好，而另一个指标的信噪比更高。在这类情况下，我们通常参照该任务在其他语言实现中所选用的指标来做出决定。我们清楚这种手工挑选往往并不可行，因此给出以下建议：
+
+➡️ 多项选择任务
+
+- 我们发现，对于答案选项差异细微的任务（例如 Yes/No/Also），**基础准确率**表现良好，NLI 任务尤其如此。在这类答案选项通常各为一个 token 的情况下，建议使用基础准确率。
+- OLMES 的作者（[Gu et al., 2024](https://arxiv.org/abs/2406.08446)）建议对含有不常见词的任务使用 PMI，但我们发现 **PMI** 对 AGIEVAL 或 MMLU 这类“困难”的推理与知识任务非常有效。在这些情形中，PMI 给出了最佳结果，而且往往是唯一能让表现超过随机的指标。话虽如此，PMI 在其余所有任务上的平均表现是最弱的，同时计算成本还是其他指标的两倍。因此我们只建议在复杂推理与知识任务中使用它。
+- 我们发现**整体最可靠**的指标是基于长度的归一化指标（按 token 或按字符）。但最佳选择取决于语言，而不是对某个给定任务保持一致。因此，为了获得最可靠的结果，我们建议取 acc_char 与 acc_token 中的最大值。<d-footnote>注意 acc_token 高度依赖分词器。在我们的消融实验中，所有模型都是用同一个分词器训练的。</d-footnote>
+
+➡️ 生成式任务
+
+对于**生成式指标**，选择就清晰得多：除非像数学类任务那样需要精确匹配，否则我们建议使用 F1 分数。F1 通常噪声更小，对生成结果的微小变化也更稳健。

@@ -1,0 +1,161 @@
+{
+  "benchmarks": {
+    "GAIA": [
+      {
+        "date": "2023-11-03",
+        "score": 0.05,
+        "model": "AutoGPT/AutoGPT4"
+      },
+      {
+        "date": "2023-11-14",
+        "score": 0.06666666666666667,
+        "model": "GAIA authors/GPT4 Turbo "
+      },
+      {
+        "date": "2024-01-18",
+        "score": 0.18484288354898337,
+        "model": "OS-Copilot"
+      },
+      {
+        "date": "2024-01-24",
+        "score": 0.2425249169435216,
+        "model": "OS-Copilot/FRIDAY"
+      },
+      {
+        "date": "2024-03-01",
+        "score": 0.3233333333333333,
+        "model": "MSR AI Frontiers/Multi-Agent Experiment v0.1 (powered by AutoGen)"
+      },
+      {
+        "date": "2024-06-06",
+        "score": 0.34551495016611294,
+        "model": "Sibyl System v0.2"
+      },
+      {
+        "date": "2024-06-16",
+        "score": 0.35910224438902744,
+        "model": "Someday"
+      },
+      {
+        "date": "2024-10-04",
+        "score": 0.38205980066445183,
+        "model": "NA/das_agent v0.4"
+      },
+      {
+        "date": "2024-10-10",
+        "score": 0.38870431893687707,
+        "model": "Multi Agent"
+      },
+      {
+        "date": "2024-10-11",
+        "score": 0.3953488372093023,
+        "model": "Trase Systems/Trase Agent v0.2"
+      },
+      {
+        "date": "2024-10-20",
+        "score": 0.4053156146179402,
+        "model": "omne v0.1"
+      },
+      {
+        "date": "2024-12-05",
+        "score": 0.49333333333333335,
+        "model": "Langfun Agent v2.0"
+      },
+      {
+        "date": "2024-12-06",
+        "score": 0.5806451612903226,
+        "model": "L1 agent"
+      },
+      {
+        "date": "2024-12-21",
+        "score": 0.6511627906976745,
+        "model": "h2o.ai/h2oGPTe Agent v1.6.8"
+      },
+      {
+        "date": "2025-02-18",
+        "score": 0.6578073089700996,
+        "model": "Trase Systems/Trase Agent v0.3.1"
+      },
+      {
+        "date": "2025-02-19",
+        "score": 0.6677740863787376,
+        "model": "Trase Systems/Trase Agent v0.3"
+      },
+      {
+        "date": "2025-03-17",
+        "score": 0.7475083056478405,
+        "model": "h2o.ai/h2oGPTe Agent 1.6.27"
+      },
+      {
+        "date": "2025-04-23",
+        "score": 0.7641196013289037,
+        "model": "Suzhou AI Lab/SU AI Zero"
+      },
+      {
+        "date": "2025-06-18",
+        "score": 0.7906976744186046,
+        "model": "h2o.ai/h2oGPTe Agent v1.6.32"
+      },
+      {
+        "date": "2025-06-20",
+        "score": 0.7940199335548173,
+        "model": "Agent2030-v2.3"
+      },
+      {
+        "date": "2025-06-22",
+        "score": 0.7973421926910299,
+        "model": "h2o.ai/h2oGPTe Agent v1.6.33"
+      },
+      {
+        "date": "2025-06-26",
+        "score": 0.8039867109634552,
+        "model": "Suzhou AI Lab/Su Zero Ultra"
+      },
+      {
+        "date": "2025-08-05",
+        "score": 0.8106312292358804,
+        "model": "Agent_v0.1.2"
+      },
+      {
+        "date": "2025-08-06",
+        "score": 0.8172757475083057,
+        "model": "inclusionAI/🐦‍🔥 AWorld (Run Instantly)"
+      },
+      {
+        "date": "2025-08-08",
+        "score": 0.8205980066445183,
+        "model": "Agent_v0.1.3"
+      },
+      {
+        "date": "2025-08-11",
+        "score": 0.8305647840531561,
+        "model": "Agent_v0.1.4"
+      },
+      {
+        "date": "2025-08-13",
+        "score": 0.8338870431893688,
+        "model": "Skywork AI/Skywork Deep Research Agent v2"
+      },
+      {
+        "date": "2025-08-30",
+        "score": 0.840531561461794,
+        "model": "ZTE-AICloud/Co-Sight_v2.0.0"
+      },
+      {
+        "date": "2025-09-24",
+        "score": 0.8438538205980066,
+        "model": "ZTE-AICloud/Co-Sight_v2.0.1"
+      },
+      {
+        "date": "2025-10-09",
+        "score": 0.867109634551495,
+        "model": "JoinAI/JoinAI_V1.1"
+      },
+      {
+        "date": "2025-10-13",
+        "score": 0.8704318936877077,
+        "model": "ZTE-AICloud/Co-Sight_v2.1.0"
+      }
+    ]
+  }
+}

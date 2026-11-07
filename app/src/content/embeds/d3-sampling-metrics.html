@@ -1,0 +1,513 @@
+<div class="d3-sampling-metrics"></div>
+
+<style>
+  .d3-sampling-metrics {
+    font-family: var(--default-font-family);
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: var(--spacing-4) 0;
+    width: 100%;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .d3-sampling-metrics svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .d3-sampling-metrics .sample-box {
+    stroke-width: 2;
+    transition: all 0.3s ease;
+  }
+
+  .d3-sampling-metrics .sample-box:hover {
+    filter: brightness(1.1);
+    stroke-width: 3;
+  }
+
+  .d3-sampling-metrics .metric-box {
+    stroke-width: 2;
+    transition: all 0.3s ease;
+  }
+
+  .d3-sampling-metrics .metric-box:hover {
+    filter: brightness(1.1);
+    stroke-width: 3;
+  }
+
+  .d3-sampling-metrics .sample-label {
+    fill: var(--text-color);
+    font-size: 11px;
+    font-weight: 600;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .d3-sampling-metrics .sample-answer {
+    fill: var(--text-color);
+    font-size: 10px;
+    font-weight: 500;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .d3-sampling-metrics .metric-label {
+    fill: var(--text-color);
+    font-size: 13px;
+    font-weight: 600;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .d3-sampling-metrics .metric-description {
+    fill: var(--muted-color);
+    font-size: 10px;
+    font-weight: 500;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .d3-sampling-metrics .metric-result {
+    font-size: 16px;
+    font-weight: 700;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .d3-sampling-metrics .section-title {
+    fill: var(--text-color);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .d3-sampling-metrics .section-title.sampling-metrics {
+    stroke: var(--surface-bg);
+    stroke-width: 10px;
+    paint-order: stroke fill;
+  }
+
+  .d3-sampling-metrics .question-text {
+    fill: var(--text-color);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .d3-sampling-metrics .link-line {
+    fill: none;
+    stroke-width: 1.5;
+    transition: all 0.3s ease;
+    opacity: 0.3;
+  }
+
+  .d3-sampling-metrics .marker {
+    opacity: 0.5;
+  }
+
+  .d3-sampling-metrics .d3-tooltip {
+    position: absolute;
+    background: var(--surface-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 12px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    max-width: 350px;
+    line-height: 1.35;
+    white-space: pre-line;
+    color: var(--text-color);
+    transform: translate(-9999px, -9999px);
+  }
+
+  @media (max-width: 768px) {
+    .d3-sampling-metrics .sample-label {
+      font-size: 10px;
+    }
+
+    .d3-sampling-metrics .sample-answer {
+      font-size: 9px;
+    }
+
+    .d3-sampling-metrics .metric-label {
+      font-size: 11px;
+    }
+
+    .d3-sampling-metrics .metric-description {
+      font-size: 9px;
+    }
+
+    .d3-sampling-metrics .metric-result {
+      font-size: 14px;
+    }
+  }
+</style>
+
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => {
+        if (window.d3 && typeof window.d3.select === 'function') cb();
+      };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-sampling-metrics'))) {
+        const candidates = Array.from(document.querySelectorAll('.d3-sampling-metrics'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+
+      if (!container) return;
+
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      container.style.position = container.style.position || 'relative';
+
+      // Tooltip
+      let tip = container.querySelector('.d3-tooltip');
+      let tipInner;
+      if (!tip) {
+        tip = document.createElement('div');
+        tip.className = 'd3-tooltip';
+        tipInner = document.createElement('div');
+        tipInner.className = 'd3-tooltip__inner';
+        tipInner.style.textAlign = 'left';
+        tip.appendChild(tipInner);
+        container.appendChild(tip);
+      } else {
+        tipInner = tip.querySelector('.d3-tooltip__inner') || tip;
+      }
+
+      // Get colors from ColorPalettes or fallback
+      const getColors = () => {
+        if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
+          const cat = window.ColorPalettes.getColors('categorical', 5);
+          return {
+            correct: cat[2], // Green-ish
+            incorrect: cat[0], // Red-ish
+            metric: cat[4]
+          };
+        }
+        // Fallback to CSS variable based colors
+        const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#6D4AFF';
+        return {
+          correct: '#4CAF50',
+          incorrect: '#F44336',
+          metric: primaryColor
+        };
+      };
+
+      // Example: Math problem "What is 15 + 27?"
+      // Correct answer: 42
+      // Samples with different answers
+      const samples = [
+        { id: 1, answer: '42', correct: true },
+        { id: 2, answer: '42', correct: true },
+        { id: 3, answer: '43', correct: false },
+        { id: 4, answer: '42', correct: true },
+        { id: 5, answer: '41', correct: false }
+      ];
+
+      const metrics = [
+        {
+          id: 'pass@1',
+          label: 'pass@1',
+          description: 'At least 1 correct',
+          result: '✓',
+          explanation: 'At least 1 of 5 samples is correct (we have 3 correct samples)',
+          usedSamples: [1]
+        },
+        {
+          id: 'pass@3',
+          label: 'pass@3',
+          description: 'At least 3 correct',
+          result: '✓',
+          explanation: 'At least 3 of 5 samples are correct (exactly 3 correct)',
+          usedSamples: [1, 2, 4]
+        },
+        {
+          id: 'maj@5',
+          label: 'maj@5',
+          description: 'Most frequent answer',
+          result: '42',
+          explanation: 'Most common answer: 42 appears 3 times vs 43 (1x) and 41 (1x)',
+          usedSamples: [1, 2, 3, 4, 5]
+        },
+        {
+          id: 'avg@5',
+          label: 'avg@5',
+          description: 'Average score',
+          result: '0.60',
+          explanation: 'Average correctness: 3 correct / 5 total = 0.60',
+          usedSamples: [1, 2, 3, 4, 5]
+        }
+      ];
+
+      const svg = d3.select(container).append('svg');
+      const g = svg.append('g');
+
+      // Arrow marker
+      svg.append('defs').append('marker')
+        .attr('id', 'arrow-sampling')
+        .attr('viewBox', '0 -5 10 10')
+        .attr('refX', 8)
+        .attr('refY', 0)
+        .attr('markerWidth', 5)
+        .attr('markerHeight', 5)
+        .attr('orient', 'auto')
+        .append('path')
+        .attr('d', 'M0,-5L10,0L0,5')
+        .attr('class', 'marker');
+
+      let width = 800;
+      let height = 500;
+
+      function render() {
+        width = container.clientWidth || 800;
+        height = Math.max(300, Math.round(width * 0.42));
+
+        svg.attr('width', width).attr('height', height);
+
+        const margin = { top: 50, right: 20, bottom: 20, left: 20 };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        g.attr('transform', `translate(${margin.left},${margin.top})`);
+
+        // Clear previous content
+        g.selectAll('*').remove();
+
+        const colors = getColors();
+
+        // Question at the top
+        g.append('text')
+          .attr('class', 'question-text')
+          .attr('x', innerWidth / 2)
+          .attr('y', -35)
+          .attr('text-anchor', 'middle')
+          .text('Question: What is 15 + 27?');
+
+        g.append('text')
+          .attr('x', innerWidth / 2)
+          .attr('y', -18)
+          .attr('text-anchor', 'middle')
+          .attr('font-size', '11px')
+          .attr('fill', 'var(--muted-color)')
+          .text('(Correct answer: 42)');
+
+        // Layout
+        const sampleBoxWidth = Math.min(80, innerWidth * 0.12);
+        const sampleBoxHeight = 60;
+        const metricBoxWidth = Math.min(140, innerWidth * 0.22);
+        const metricBoxHeight = 75;
+
+        // Position samples in a row
+        const samplesY = 40;
+        const sampleSpacing = (innerWidth - sampleBoxWidth * samples.length) / (samples.length + 1);
+
+        const sampleNodes = samples.map((d, i) => ({
+          ...d,
+          x: sampleSpacing + i * (sampleBoxWidth + sampleSpacing),
+          y: samplesY,
+          width: sampleBoxWidth,
+          height: sampleBoxHeight
+        }));
+
+        // Position metrics below
+        const metricsY = samplesY + sampleBoxHeight + 60;
+        const metricSpacing = (innerWidth - metricBoxWidth * metrics.length) / (metrics.length + 1);
+
+        const metricNodes = metrics.map((d, i) => ({
+          ...d,
+          x: metricSpacing + i * (metricBoxWidth + metricSpacing),
+          y: metricsY,
+          width: metricBoxWidth,
+          height: metricBoxHeight
+        }));
+
+        // Section titles
+        g.append('text')
+          .attr('class', 'section-title')
+          .attr('x', innerWidth / 2)
+          .attr('y', samplesY - 20)
+          .attr('text-anchor', 'middle')
+          .text('5 SAMPLED GENERATIONS');
+
+        // Draw connection lines from samples to metrics
+        const linkGroup = g.append('g').attr('class', 'links');
+
+        metricNodes.forEach(metric => {
+          metric.usedSamples.forEach(sampleId => {
+            const sample = sampleNodes.find(s => s.id === sampleId);
+            if (sample) {
+              const sx = sample.x + sample.width / 2;
+              const sy = sample.y + sample.height;
+              const tx = metric.x + metric.width / 2;
+              const ty = metric.y;
+
+              linkGroup.append('line')
+                .attr('class', 'link-line')
+                .attr('x1', sx)
+                .attr('y1', sy)
+                .attr('x2', tx)
+                .attr('y2', ty)
+                .attr('stroke', colors.metric);
+            }
+          });
+        });
+
+        // Draw sample boxes
+        const sampleGroup = g.append('g').attr('class', 'samples');
+
+        const sampleBoxes = sampleGroup.selectAll('.sample')
+          .data(sampleNodes)
+          .join('g')
+          .attr('class', 'sample')
+          .attr('transform', d => `translate(${d.x},${d.y})`);
+
+        sampleBoxes.append('rect')
+          .attr('class', 'sample-box')
+          .attr('width', d => d.width)
+          .attr('height', d => d.height)
+          .attr('rx', 6)
+          .attr('fill', d => d.correct ? colors.correct : colors.incorrect)
+          .attr('fill-opacity', 0.3)
+          .attr('stroke', d => d.correct ? colors.correct : colors.incorrect)
+          .style('cursor', 'pointer')
+          .on('mouseenter', function(event, d) {
+            const status = d.correct ? 'Correct ✓' : 'Incorrect ✗';
+            tipInner.textContent = `Sample ${d.id}: "${d.answer}"\n${status}`;
+            tip.style.opacity = '1';
+            const [mx, my] = d3.pointer(event, container);
+            tip.style.transform = `translate(${mx + 10}px, ${my + 10}px)`;
+          })
+          .on('mouseleave', function() {
+            tip.style.opacity = '0';
+            tip.style.transform = 'translate(-9999px, -9999px)';
+          });
+
+        sampleBoxes.append('text')
+          .attr('class', 'sample-label')
+          .attr('x', d => d.width / 2)
+          .attr('y', 18)
+          .attr('text-anchor', 'middle')
+          .text(d => `#${d.id}`);
+
+        sampleBoxes.append('text')
+          .attr('class', 'sample-answer')
+          .attr('x', d => d.width / 2)
+          .attr('y', 35)
+          .attr('text-anchor', 'middle')
+          .attr('font-size', '14px')
+          .attr('font-weight', '700')
+          .text(d => d.answer);
+
+        sampleBoxes.append('text')
+          .attr('class', 'sample-label')
+          .attr('x', d => d.width / 2)
+          .attr('y', 50)
+          .attr('text-anchor', 'middle')
+          .attr('font-size', '10px')
+          .text(d => d.correct ? '✓' : '✗');
+
+        // Draw metric boxes
+        const metricGroup = g.append('g').attr('class', 'metrics');
+
+        const metricBoxes = metricGroup.selectAll('.metric')
+          .data(metricNodes)
+          .join('g')
+          .attr('class', 'metric')
+          .attr('transform', d => `translate(${d.x},${d.y})`);
+
+        metricBoxes.append('rect')
+          .attr('class', 'metric-box')
+          .attr('width', d => d.width)
+          .attr('height', d => d.height)
+          .attr('rx', 8)
+          .attr('fill', colors.metric)
+          .attr('fill-opacity', 0.35)
+          .attr('stroke', colors.metric)
+          .style('cursor', 'pointer')
+          .on('mouseenter', function(event, d) {
+            tipInner.textContent = d.explanation;
+            tip.style.opacity = '1';
+            const [mx, my] = d3.pointer(event, container);
+            tip.style.transform = `translate(${mx + 10}px, ${my + 10}px)`;
+          })
+          .on('mouseleave', function() {
+            tip.style.opacity = '0';
+            tip.style.transform = 'translate(-9999px, -9999px)';
+          });
+
+        metricBoxes.append('text')
+          .attr('class', 'metric-label')
+          .attr('x', d => d.width / 2)
+          .attr('y', 18)
+          .attr('text-anchor', 'middle')
+          .text(d => d.label);
+
+        metricBoxes.append('text')
+          .attr('class', 'metric-description')
+          .attr('x', d => d.width / 2)
+          .attr('y', 32)
+          .attr('text-anchor', 'middle')
+          .text(d => d.description);
+
+        metricBoxes.append('text')
+          .attr('class', 'metric-result')
+          .attr('x', d => d.width / 2)
+          .attr('y', 56)
+          .attr('text-anchor', 'middle')
+          .attr('fill', colors.metric)
+          .text(d => d.result);
+
+        // Ajouter "SAMPLING METRICS" en dernier pour qu'il soit au-dessus de tout
+        g.append('text')
+          .attr('class', 'section-title sampling-metrics')
+          .attr('x', innerWidth / 2)
+          .attr('y', metricsY - 20)
+          .attr('text-anchor', 'middle')
+          .text('SAMPLING METRICS');
+      }
+
+      render();
+
+      // Responsive handling
+      if (window.ResizeObserver) {
+        const ro = new ResizeObserver(() => render());
+        ro.observe(container);
+      } else {
+        window.addEventListener('resize', render);
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    } else {
+      ensureD3(bootstrap);
+    }
+  })();
+</script>

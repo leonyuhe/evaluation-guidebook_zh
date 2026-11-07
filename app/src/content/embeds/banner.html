@@ -1,0 +1,1235 @@
+<div class="d3-leaderboard-chart-wrapper" style="width:100%;margin:10px 0;padding:10px 5px 5px 5px;border-radius:8px;background:var(--surface-bg);border:1px solid var(--border-color);position:relative;">
+    <h3 class="d3-chart-title" style="margin:10px 0 15px 15px;font-size:16px;font-weight:600;color:var(--text-color);opacity:0.9;white-space:nowrap;text-align:left;display:block;width:100%;">The benchmark lifecycle</h3>
+    <div class="d3-leaderboard-chart" style="width:100%;aspect-ratio:2.8/1;min-height:320px;"></div>
+</div>
+<style>
+  .d3-leaderboard-chart {
+    position: relative;
+  }
+  
+  .d3-leaderboard-chart .d3-tooltip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translate(-9999px, -9999px);
+    pointer-events: none;
+    padding: 10px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.35;
+    border: 1px solid var(--border-color);
+    background: var(--surface-bg);
+    color: var(--text-color);
+    box-shadow: 0 8px 32px rgba(0,0,0,.28), 0 2px 8px rgba(0,0,0,.12);
+    opacity: 0;
+    transition: opacity .12s ease;
+    z-index: 20;
+    backdrop-filter: saturate(1.12) blur(8px);
+  }
+  
+  .d3-info-icon {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--surface-bg);
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--muted-color);
+    transition: all 0.2s ease;
+    z-index: 10;
+  }
+  
+  .d3-info-icon:hover {
+    color: var(--text-color);
+    background: var(--surface-bg);
+    border-color: var(--text-color);
+  }
+  
+  .d3-info-tooltip {
+    position: absolute;
+    bottom: 50px;
+    right: 15px;
+    max-width: 400px;
+    padding: 16px;
+    background: var(--surface-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text-color);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 10000;
+    transition: opacity 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    backdrop-filter: saturate(1.12) blur(8px);
+    text-align: left;
+  }
+  
+  .d3-leaderboard-chart .d3-tooltip__inner {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 180px;
+  }
+  
+  .d3-leaderboard-chart .d3-tooltip__inner > div:first-child {
+    font-weight: 800;
+    letter-spacing: 0.1px;
+    margin-bottom: 0;
+  }
+  
+  .d3-leaderboard-chart .d3-tooltip__inner > div:nth-child(2) {
+    font-size: 11px;
+    color: var(--muted-color, #9ca3af);
+    display: block;
+    margin-top: -4px;
+    margin-bottom: 2px;
+    letter-spacing: 0.1px;
+  }
+  
+  .d3-leaderboard-chart .d3-tooltip__inner > div:nth-child(n+3) {
+    padding-top: 6px;
+    border-top: 1px solid var(--border-color);
+  }
+  
+  .d3-leaderboard-chart .d3-tooltip__color-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+  }
+</style>
+<script>
+    (() => {
+        const ensureD3 = (cb) => {
+            if (window.d3 && typeof window.d3.select === 'function') return cb();
+            let s = document.getElementById('d3-cdn-script');
+            if (!s) {
+                s = document.createElement('script');
+                s.id = 'd3-cdn-script';
+                s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+                document.head.appendChild(s);
+            }
+            const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+            s.addEventListener('load', onReady, { once: true });
+            if (window.d3) onReady();
+        };
+
+        const bootstrap = () => {
+            const mount = document.currentScript ? document.currentScript.previousElementSibling : null;
+            const container = (mount && mount.querySelector && mount.querySelector('.d3-leaderboard-chart')) || document.querySelector('.d3-leaderboard-chart');
+            if (!container) return;
+            if (container.dataset) {
+                if (container.dataset.mounted === 'true') return;
+                container.dataset.mounted = 'true';
+            }
+
+            // Get categorical colors from ColorPalettes
+            function getCategoricalColors(n) {
+                try {
+                    if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
+                        return window.ColorPalettes.getColors('categorical', n);
+                    }
+                } catch (e) {
+                    console.warn('ColorPalettes not available, using fallback');
+                }
+                // Fallback: Tableau10 palette
+                const tableau = (window.d3 && window.d3.schemeTableau10) 
+                    ? window.d3.schemeTableau10 
+                    : ['#4e79a7', '#f28e2b', '#e15759', '#76b7b2', '#59a14f', '#edc948', '#b07aa1', '#ff9da7', '#9c755f', '#bab0ab'];
+                return tableau.slice(0, n);
+            }
+
+            // Create color mapping for benchmarks
+            let colorMap = {};
+            
+            // Définir les groupes de benchmarks globalement
+            // Agentic en premier pour obtenir la première couleur (orange)
+            const BENCHMARK_GROUPS = [
+                {
+                    name: 'Agentic',
+                    benchmarks: ['GAIA']
+                },
+                {
+                    name: 'Reasoning & Commonsense',
+                    benchmarks: ['MUSR', 'BBH', 'Winogrande', 'TruthfulQA', 'HellaSwag']
+                },
+                {
+                    name: 'Knowledge',
+                    benchmarks: ['MMLU', 'MMLU-Pro', 'GPQA', 'ARC']
+                },
+                {
+                    name: 'Math',
+                    benchmarks: ['GSM8K', 'MATH']
+                },
+                {
+                    name: 'Instruction following',
+                    benchmarks: ['IFEval']
+                }
+            ];
+            
+            // Fonction pour créer des variations de couleur à partir d'une couleur de base
+            function createColorVariation(baseColor, index, total) {
+                // Convertir la couleur hex en RGB
+                const hex = baseColor.replace('#', '');
+                const r = parseInt(hex.substr(0, 2), 16);
+                const g = parseInt(hex.substr(2, 2), 16);
+                const b = parseInt(hex.substr(4, 2), 16);
+                
+                // Créer des variations en ajustant la luminosité
+                // Variation de -15% à +15% selon l'index
+                const variationRange = 0.15;
+                const step = total > 1 ? (variationRange * 2) / (total - 1) : 0;
+                const brightnessAdjust = -variationRange + (index * step);
+                
+                // Ajuster la luminosité
+                const adjustBrightness = (value, factor) => {
+                    const adjusted = value + (255 - value) * factor;
+                    return Math.max(0, Math.min(255, Math.round(adjusted)));
+                };
+                
+                const newR = adjustBrightness(r, brightnessAdjust);
+                const newG = adjustBrightness(g, brightnessAdjust);
+                const newB = adjustBrightness(b, brightnessAdjust);
+                
+                // Convertir en hex
+                const toHex = (n) => {
+                    const hex = n.toString(16);
+                    return hex.length === 1 ? '0' + hex : hex;
+                };
+                
+                return `#${toHex(newR)}${toHex(newG)}${toHex(newB)}`;
+            }
+            
+            // Mapping des benchmarks vers leurs groupes
+            function getBenchmarkGroup(benchmark) {
+                // Gérer MMLU_new qui s'affiche comme MMLU-Pro
+                const displayName = benchmark === 'MMLU_new' ? 'MMLU-Pro' : benchmark;
+                
+                for (const group of BENCHMARK_GROUPS) {
+                    if (group.benchmarks.includes(displayName)) {
+                        return group.name;
+                    }
+                }
+                return null;
+            }
+            
+            // Stocker les couleurs de base des groupes pour la légende
+            let groupBaseColors = {};
+            
+            function updateColorMap(benchmarks) {
+                // Obtenir les groupes uniques (dans l'ordre de BENCHMARK_GROUPS pour que Agentic soit en premier)
+                const allGroups = BENCHMARK_GROUPS.map(g => g.name);
+                const presentGroups = allGroups.filter(groupName => {
+                    return benchmarks.some(b => getBenchmarkGroup(b) === groupName);
+                });
+                
+                // Obtenir la palette avec le nombre exact de groupes présents
+                const palette = getCategoricalColors(presentGroups.length);
+                
+                // Créer un mapping groupe -> couleur de base (pour la légende)
+                groupBaseColors = {};
+                presentGroups.forEach((group, i) => {
+                    groupBaseColors[group] = palette[i];
+                });
+                
+                // Créer un mapping benchmark -> couleur (variation de la couleur du groupe)
+                colorMap = {};
+                
+                // Pour chaque groupe, créer des variations pour chaque benchmark
+                BENCHMARK_GROUPS.forEach(group => {
+                    if (!groupBaseColors[group.name]) return;
+                    
+                    const baseColor = groupBaseColors[group.name];
+                    
+                    // Trouver les benchmarks du groupe qui sont présents dans les données
+                    const groupBenchmarks = [];
+                    group.benchmarks.forEach(benchmark => {
+                        // Pour MMLU-Pro, chercher MMLU_new dans les benchmarks
+                        if (benchmark === 'MMLU-Pro') {
+                            if (benchmarks.includes('MMLU_new')) {
+                                groupBenchmarks.push({ displayName: 'MMLU-Pro', dataKey: 'MMLU_new' });
+                            }
+                        } else {
+                            if (benchmarks.includes(benchmark)) {
+                                groupBenchmarks.push({ displayName: benchmark, dataKey: benchmark });
+                            }
+                        }
+                    });
+                    
+                    // Assigner des variations de couleur à chaque benchmark
+                    groupBenchmarks.forEach((benchmarkInfo, index) => {
+                        // Créer une variation de couleur
+                        const variation = createColorVariation(baseColor, index, groupBenchmarks.length);
+                        // Mapper avec la clé de données (dataKey)
+                        colorMap[benchmarkInfo.dataKey] = variation;
+                    });
+                });
+            }
+            
+            // Fonction pour obtenir la couleur de base d'un groupe (pour la légende)
+            function getGroupBaseColor(groupName) {
+                return groupBaseColors[groupName] || '#000000';
+            }
+
+            // Helper to get color for a benchmark (via son groupe)
+            function getColor(benchmark) {
+                if (colorMap && colorMap[benchmark]) {
+                    return colorMap[benchmark];
+                }
+                // Fallback si le benchmark n'est pas dans la map
+                const group = getBenchmarkGroup(benchmark);
+                if (group) {
+                    // Essayer de trouver la couleur du groupe
+                    const palette = getCategoricalColors(BENCHMARK_GROUPS.length);
+                    const groupIndex = BENCHMARK_GROUPS.findIndex(g => g.name === group);
+                    if (groupIndex >= 0) {
+                        return palette[groupIndex % palette.length];
+                    }
+                }
+                // Fallback final
+                const palette = getCategoricalColors(10);
+                const index = (benchmark || '').charCodeAt(0) % palette.length;
+                return palette[index];
+            }
+
+            let data = null;
+            let scatterData = null; // Données du nuage de points
+            
+            // Créer l'icône info en bas à droite de l'embed (HTML, pas SVG)
+            const wrapper = container.closest('.d3-leaderboard-chart-wrapper');
+            if (wrapper) {
+                let infoIcon = wrapper.querySelector('.d3-info-icon');
+                if (!infoIcon) {
+                    infoIcon = document.createElement('div');
+                    infoIcon.className = 'd3-info-icon';
+                    infoIcon.innerHTML = `
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M8 6C8 4.89543 8.89543 4 10 4C11.1046 4 12 4.89543 12 6C12 7.10457 11.1046 8 10 8V10M10 14H10.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    `;
+                    wrapper.appendChild(infoIcon);
+                    
+                    // Tooltip pour l'icône info
+                    let infoTooltip = wrapper.querySelector('.d3-info-tooltip');
+                    if (!infoTooltip) {
+                        infoTooltip = document.createElement('div');
+                        infoTooltip.className = 'd3-info-tooltip';
+                        infoTooltip.innerHTML = `
+                            <div style="font-weight: 600; margin-bottom: 10px; color: var(--text-color); font-size: 13px; text-align: left;">About this chart</div>
+                            <div style="color: var(--text-color); font-size: 12px; line-height: 1.6; text-align: left;">
+                                <p style="margin: 0 0 10px 0; text-align: left;">
+                                    This visualization tracks the evolution of top benchmark scores over time across 3 leaderboards managed by Hugging Face 
+                                    through the years: the Open LLM Leaderboard 1, 2, and the GAIA leaderboard. 
+                                    The step-like lines represent the progression of maximum scores achieved for each benchmark, with circular markers 
+                                    indicating when a new record was set. It illustrates a phenomenon known as saturation.
+                                </p>
+                                <p style="margin: 0 0 10px 0; text-align: left;">
+                                    The gray scatter plot in the background shows the average scores of all evaluated models for a given leaderboard 
+                                    at a given time, and allows to follow the trend of submission for each leaderboard.
+                                </p>
+                                <p style="margin: 0; text-align: left;">
+                                    Benchmarks are grouped by category (Reasoning & Commonsense, Knowledge, Math, Agentic, and Instruction following), 
+                                    with each group sharing a color family. 
+                                </p>
+                            </div>
+                        `;
+                        wrapper.appendChild(infoTooltip);
+                    }
+                    
+                    // Gestion du hover
+                    infoIcon.addEventListener('mouseenter', () => {
+                        infoTooltip.style.opacity = '1';
+                        infoTooltip.style.pointerEvents = 'auto';
+                    });
+                    
+                    infoIcon.addEventListener('mouseleave', () => {
+                        infoTooltip.style.opacity = '0';
+                        infoTooltip.style.pointerEvents = 'none';
+                    });
+                }
+            }
+            
+            // Tooltip pour les points
+            let tip = container.querySelector('.d3-tooltip');
+            let tipInner;
+            if (!tip) {
+                tip = document.createElement('div');
+                tip.className = 'd3-tooltip';
+                tipInner = document.createElement('div');
+                tipInner.className = 'd3-tooltip__inner';
+                tip.appendChild(tipInner);
+                container.appendChild(tip);
+            } else {
+                tipInner = tip.querySelector('.d3-tooltip__inner') || tip;
+            }
+
+            // Load data from JSON (both old and new leaderboards)
+            const loadData = async () => {
+                const dataPaths = [
+                    '/data/leaderboard_scores_over_time.json',
+                    './assets/data/leaderboard_scores_over_time.json',
+                    '../assets/data/leaderboard_scores_over_time.json',
+                    '../../assets/data/leaderboard_scores_over_time.json'
+                ];
+                
+                const oldDataPaths = [
+                    '/data/leaderboard_scores_over_time_old.json',
+                    './assets/data/leaderboard_scores_over_time_old.json',
+                    '../assets/data/leaderboard_scores_over_time_old.json',
+                    '../../assets/data/leaderboard_scores_over_time_old.json'
+                ];
+                
+                const gaiaDataPaths = [
+                    '/data/data_gaia.json',
+                    './assets/data/data_gaia.json',
+                    '../assets/data/data_gaia.json',
+                    '../../assets/data/data_gaia.json'
+                ];
+
+                let newData = null;
+                let oldData = null;
+                let gaiaData = null;
+
+                // Load new leaderboard data
+                for (const path of dataPaths) {
+                    try {
+                        const response = await fetch(path, { cache: 'no-cache' });
+                        if (response.ok) {
+                            newData = await response.json();
+                            break;
+                        }
+                    } catch (e) {
+                        // Continue to next path
+                    }
+                }
+
+                // Load old leaderboard data
+                for (const path of oldDataPaths) {
+                    try {
+                        const response = await fetch(path, { cache: 'no-cache' });
+                        if (response.ok) {
+                            oldData = await response.json();
+                            break;
+                        }
+                    } catch (e) {
+                        // Continue to next path
+                    }
+                }
+                
+                // Load GAIA data
+                for (const path of gaiaDataPaths) {
+                    try {
+                        const response = await fetch(path, { cache: 'no-cache' });
+                        if (response.ok) {
+                            gaiaData = await response.json();
+                            // Convert GAIA scores from 0-1 to 0-100
+                            if (gaiaData && gaiaData.benchmarks && gaiaData.benchmarks.GAIA) {
+                                gaiaData.benchmarks.GAIA = gaiaData.benchmarks.GAIA.map(point => ({
+                                    ...point,
+                                    score: point.score * 100
+                                }));
+                            }
+                            break;
+                        }
+                    } catch (e) {
+                        // Continue to next path
+                    }
+                }
+
+                // Merge both datasets
+                data = { benchmarks: {} };
+                
+                if (newData) {
+                    Object.assign(data.benchmarks, newData.benchmarks || {});
+                }
+                
+                // Add GAIA data
+                if (gaiaData && gaiaData.benchmarks) {
+                    Object.assign(data.benchmarks, gaiaData.benchmarks);
+                }
+                
+                if (oldData) {
+                    // Merge old benchmarks (they might overlap with new ones, keep both)
+                    Object.keys(oldData.benchmarks || {}).forEach(benchmark => {
+                        if (data.benchmarks[benchmark]) {
+                            // If benchmark exists in both (like MMLU), create two separate entries
+                            // Find the transition date (roughly June 2024)
+                            const transitionDate = new Date('2024-06-01');
+                            
+                            // Separate points by period
+                            const oldPoints = oldData.benchmarks[benchmark].filter(p => new Date(p.date) < transitionDate);
+                            const newPoints = data.benchmarks[benchmark].filter(p => new Date(p.date) >= transitionDate);
+                            
+                            // Calculate records separately for old period
+                            const oldRecords = [];
+                            let maxSoFarOld = 0;
+                            oldPoints.forEach(point => {
+                                if (point.score > maxSoFarOld) {
+                                    maxSoFarOld = point.score;
+                                    oldRecords.push({ date: point.date, score: maxSoFarOld });
+                                }
+                            });
+
+                            // For new period, calculate records independently
+                            const newRecords = [];
+                            let maxSoFarNew = 0;
+                            newPoints.forEach(point => {
+                                if (point.score > maxSoFarNew) {
+                                    maxSoFarNew = point.score;
+                                    newRecords.push({ date: point.date, score: maxSoFarNew });
+                                }
+                            });
+
+                            // Keep old period with original name
+                            if (oldRecords.length > 0) {
+                                data.benchmarks[benchmark] = oldRecords;
+                            } else {
+                                // If no old records, remove the benchmark from data
+                                delete data.benchmarks[benchmark];
+                            }
+                            
+                            // Add new period with a different name
+                            if (newRecords.length > 0) {
+                                data.benchmarks[benchmark + '_new'] = newRecords;
+                            }
+                        } else {
+                            // Benchmark only in old data, add it directly
+                            data.benchmarks[benchmark] = oldData.benchmarks[benchmark];
+                        }
+                    });
+                }
+                
+                
+                if (Object.keys(data.benchmarks).length === 0) {
+                    console.warn('Could not load leaderboard data, using empty dataset');
+                    data = { benchmarks: {} };
+                }
+                
+                // Charger les données du nuage de points
+                const scatterPaths = [
+                    '/assets/data/leaderboard_scatter_plot.json',
+                    '/data/leaderboard_scatter_plot.json',
+                    './assets/data/leaderboard_scatter_plot.json',
+                    '../assets/data/leaderboard_scatter_plot.json',
+                    '../../assets/data/leaderboard_scatter_plot.json'
+                ];
+                
+                const gaiaScatterPaths = [
+                    '/assets/data/data_gaia_points.json',
+                    '/data/data_gaia_points.json',
+                    './assets/data/data_gaia_points.json',
+                    '../assets/data/data_gaia_points.json',
+                    '../../assets/data/data_gaia_points.json'
+                ];
+                
+                for (const path of scatterPaths) {
+                    try {
+                        const scatterResponse = await fetch(path, { cache: 'no-cache' });
+                        if (scatterResponse.ok) {
+                            scatterData = await scatterResponse.json();
+                            break;
+                        }
+                    } catch (e) {
+                        // Continue to next path
+                    }
+                }
+                
+                // Load GAIA scatter points
+                let gaiaScatterData = null;
+                for (const path of gaiaScatterPaths) {
+                    try {
+                        const scatterResponse = await fetch(path, { cache: 'no-cache' });
+                        if (scatterResponse.ok) {
+                            gaiaScatterData = await scatterResponse.json();
+                            // Convert GAIA scores from 0-1 to 0-100
+                            if (gaiaScatterData && gaiaScatterData.points) {
+                                gaiaScatterData.points = gaiaScatterData.points.map(point => ({
+                                    ...point,
+                                    average_score: point.average_score * 100
+                                }));
+                            }
+                            break;
+                        }
+                    } catch (e) {
+                        // Continue to next path
+                    }
+                }
+                
+                // Merge scatter data
+                if (gaiaScatterData && gaiaScatterData.points) {
+                    if (!scatterData) {
+                        scatterData = { points: [] };
+                    }
+                    if (!scatterData.points) {
+                        scatterData.points = [];
+                    }
+                    const gaiaPointsCount = gaiaScatterData.points.length;
+                    scatterData.points = scatterData.points.concat(gaiaScatterData.points);
+                    console.log(`✅ ${gaiaPointsCount} points GAIA ajoutés au nuage de points (total: ${scatterData.points.length})`);
+                }
+            };
+
+            // Create SVG
+            const svg = d3.select(container).append('svg')
+                .attr('width', '100%')
+                .style('display', 'block')
+                .style('cursor', 'default');
+
+            // Theme detection and update function
+            const getThemeColors = () => {
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                return {
+                    isDark,
+                    textColor: isDark ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.6)',
+                    gridColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+                    axisColor: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)',
+                    tooltipBg: isDark ? 'rgba(20, 20, 25, 0.98)' : 'rgba(255, 255, 255, 0.98)',
+                    tooltipBorder: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)',
+                    tooltipText: isDark ? 'rgba(255, 255, 255, 0.95)' : 'rgba(0, 0, 0, 0.9)',
+                    tooltipMuted: isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.5)'
+                };
+            };
+            
+            let themeColors = getThemeColors();
+            let legendDivRef = null; // Référence à la légende pour les mises à jour de thème
+            let svgRef = null; // Référence au SVG pour les mises à jour de thème
+            
+            // Watch for theme changes
+            const themeObserver = new MutationObserver(() => {
+                themeColors = getThemeColors();
+                // Legend colors are now handled by CSS variables, no manual update needed
+                // Update axis colors and grid
+                if (svgRef) {
+                    const g = svgRef.select('g');
+                    if (g && !g.empty()) {
+                        g.selectAll('.axis .tick line').attr('stroke', themeColors.axisColor);
+                        g.selectAll('.axis .tick text').attr('fill', themeColors.textColor);
+                        g.selectAll('.grid-line').attr('stroke', themeColors.gridColor);
+                    }
+                }
+            });
+            themeObserver.observe(document.documentElement, {
+                attributes: true,
+                attributeFilter: ['data-theme']
+            });
+
+            const render = () => {
+                // Update theme colors before rendering
+                themeColors = getThemeColors();
+                
+                if (!data || !data.benchmarks) {
+                    // Show loading message
+                    svg.selectAll('*').remove();
+                    const width = container.clientWidth || 800;
+                    const height = Math.max(380, Math.round(width / 2.8));
+                    svg.attr('width', width).attr('height', height);
+                    
+                    svg.append('text')
+                        .attr('x', width / 2)
+                        .attr('y', height / 2)
+                        .attr('text-anchor', 'middle')
+                        .attr('fill', themeColors.textColor)
+                        .text('Chargement des données...');
+                    return;
+                }
+
+                const width = container.clientWidth || 800;
+                const height = Math.max(380, Math.round(width / 2.8));
+                svg.attr('width', width).attr('height', height);
+
+                // Clear previous render
+                svg.selectAll('*').remove();
+
+                // Margins (augmenter le bottom pour la légende et plus d'espace à gauche/droite)
+                // Espacement uniforme à gauche et à droite
+                const sidePadding = 25; // Espacement uniforme pour légende et titre
+                const chartRightMargin = sidePadding * 2; // Double espacement à droite du chart
+                const margin = { top: 10, right: chartRightMargin, bottom: 150, left: 60 };
+                const innerWidth = width - margin.left - margin.right;
+                const innerHeight = height - margin.top - margin.bottom;
+
+                // Collect all dates and scores for scaling (limité à décembre 2025)
+                const maxDate = new Date('2025-12-31');
+                const allDates = [];
+                const allScores = [];
+                
+                Object.values(data.benchmarks).forEach(benchmarkData => {
+                    benchmarkData.forEach(point => {
+                        const pointDate = new Date(point.date);
+                        if (pointDate <= maxDate) {
+                            allDates.push(pointDate);
+                            allScores.push(point.score);
+                        }
+                    });
+                });
+
+                if (allDates.length === 0) {
+                    svg.append('text')
+                        .attr('x', width / 2)
+                        .attr('y', height / 2)
+                        .attr('text-anchor', 'middle')
+                        .attr('fill', themeColors.textColor)
+                        .text('Aucune donnée disponible');
+                    return;
+                }
+
+                // Scales (store in window for hover functions)
+                // Limiter le domaine à décembre 2025
+                const maxDateLimit = new Date('2025-12-31');
+                const dateExtent = d3.extent(allDates);
+                // S'assurer que le domaine ne dépasse pas décembre 2025
+                const domainMax = dateExtent[1] && dateExtent[1] > maxDateLimit ? maxDateLimit : (dateExtent[1] || maxDateLimit);
+                
+                window.bannerXScale = d3.scaleTime()
+                    .domain([dateExtent[0] || new Date('2023-01-01'), domainMax])
+                    .range([0, innerWidth])
+                    .nice();
+                
+                // Forcer le domaine maximum à décembre 2025 (après .nice() qui peut étendre le domaine)
+                const currentDomain = window.bannerXScale.domain();
+                if (currentDomain[1] > maxDateLimit) {
+                    window.bannerXScale.domain([currentDomain[0], maxDateLimit]);
+                }
+                
+                // Réappliquer nice() seulement sur le min si nécessaire, mais garder le max à décembre 2025
+                const finalDomain = window.bannerXScale.domain();
+                window.bannerXScale.domain([finalDomain[0], maxDateLimit]);
+                
+                const xScale = window.bannerXScale;
+
+                const yScale = d3.scaleLinear()
+                    .domain([0, Math.max(100, d3.max(allScores) * 1.1)])
+                    .range([innerHeight, 0])
+                    .nice();
+
+                // Create main group
+                const g = svg.append('g')
+                    .attr('transform', `translate(${margin.left},${margin.top})`);
+                
+                // Stocker la référence au SVG pour les mises à jour de thème
+                svgRef = svg;
+                
+                // Hover layer for tooltip
+                const gHover = g.append('g').attr('class', 'hover-layer');
+                let hoverLine = null;
+
+                // Grid lines
+                const yTicks = yScale.ticks(5);
+                g.selectAll('.grid-line')
+                    .data(yTicks)
+                    .enter().append('line')
+                    .attr('class', 'grid-line')
+                    .attr('x1', 0)
+                    .attr('x2', innerWidth)
+                    .attr('y1', d => yScale(d))
+                    .attr('y2', d => yScale(d))
+                    .attr('stroke', themeColors.gridColor)
+                    .attr('stroke-width', 1)
+                    .attr('stroke-dasharray', '2,2');
+
+                // Line generator - courbe en escalier (step) pour afficher des seuils successifs
+                // La ligne reste constante jusqu'au prochain point
+                const line = d3.line()
+                    .x(d => xScale(new Date(d.date)))
+                    .y(d => yScale(d.score))
+                    .curve(d3.curveStepAfter); // Step function : reste constante jusqu'au prochain point
+
+                // Draw lines for each benchmark
+                // Handle MMLU separately: old and new as separate lines
+                let benchmarks = Object.keys(data.benchmarks).sort();
+                
+                // If MMLU_new exists, add it to benchmarks list but map it to display as MMLU
+                if (data.benchmarks['MMLU_new']) {
+                    benchmarks.push('MMLU_new');
+                }
+                
+                // Update color map avec tous les benchmarks (les couleurs seront assignées par groupe)
+                updateColorMap(benchmarks);
+                
+                // Fonctions pour gérer le highlight
+                const highlightBenchmark = (highlightedBenchmark) => {
+                    benchmarks.forEach(benchmark => {
+                        const displayName = benchmark === 'MMLU_new' ? 'MMLU-Pro' : benchmark;
+                        if (displayName === highlightedBenchmark) {
+                            // Mettre en évidence la ligne sélectionnée
+                            g.selectAll(`.line-${benchmark}`).style('opacity', 1).attr('stroke-width', 3);
+                            g.selectAll(`.marker-${benchmark}`).style('opacity', 1);
+                            g.selectAll(`.legend-${displayName}`).style('opacity', 1);
+                } else {
+                            // Ghost les autres lignes
+                            g.selectAll(`.line-${benchmark}`).style('opacity', 0.15);
+                            g.selectAll(`.marker-${benchmark}`).style('opacity', 0.15);
+                            g.selectAll(`.legend-${displayName}`).style('opacity', 0.3);
+                }
+                    });
+                    // Ghost aussi les nuages de points
+                    g.selectAll('.scatter-point').style('opacity', 0.1);
+                };
+                
+                const resetHighlight = () => {
+                    benchmarks.forEach(benchmark => {
+                        g.selectAll(`.line-${benchmark}`).style('opacity', 0.9).attr('stroke-width', 2.5);
+                        g.selectAll(`.marker-${benchmark}`).style('opacity', 1);
+                        const displayName = benchmark === 'MMLU_new' ? 'MMLU-Pro' : benchmark;
+                        g.selectAll(`.legend-${displayName}`).style('opacity', 1);
+                    });
+                    // Réinitialiser aussi les nuages de points
+                    g.selectAll('.scatter-point').style('opacity', 1);
+                };
+                
+                // Ajouter le nuage de points EN PREMIER (en dessous de tout)
+                if (scatterData && scatterData.points && scatterData.points.length > 0) {
+                    // Utiliser les dates déjà filtrées (allDates est défini plus haut)
+                    if (allDates.length > 0) {
+                        const minDate = d3.min(allDates);
+                        const maxDateLimit = new Date('2025-12-31'); // Limiter à décembre 2025
+                        const maxDate = d3.min([d3.max(allDates), maxDateLimit]);
+                        
+                        const filteredPoints = scatterData.points.filter(p => {
+                            const pointDate = new Date(p.date);
+                            return pointDate >= minDate && pointDate <= maxDateLimit;
+                        });
+                        
+                        // Debug: compter les points GAIA dans les points filtrés
+                        const gaiaFilteredCount = filteredPoints.filter(p => p.leaderboard === 'gaia').length;
+                        if (gaiaFilteredCount > 0) {
+                            console.log(`✅ ${gaiaFilteredCount} points GAIA affichés dans le nuage (sur ${filteredPoints.length} points totaux)`);
+                        }
+                        
+                        // Créer un groupe pour le nuage de points (en arrière-plan, en premier)
+                        const scatterGroup = g.append('g')
+                            .attr('class', 'scatter-points');
+                        
+                        // Ajouter les points
+                        scatterGroup.selectAll('.scatter-point')
+                            .data(filteredPoints)
+                            .enter().append('circle')
+                            .attr('class', d => `scatter-point scatter-${d.leaderboard}`)
+                            .attr('cx', d => xScale(new Date(d.date)))
+                            .attr('cy', d => {
+                                // Utiliser average_score_raw si disponible (nouveau leaderboard), sinon average_score
+                                const score = d.average_score_raw !== undefined ? d.average_score_raw : d.average_score;
+                                return yScale(score);
+                            })
+                            .attr('r', 0.75) // Taille réduite pour moins de bruit visuel
+                            .style('fill', 'var(--grid-color)') // Utiliser la variable CSS qui s'adapte au thème
+                            .style('opacity', '0.5') // Opacité supplémentaire pour light mode (moins visible)
+                            .attr('stroke', 'none')
+                            .style('pointer-events', 'none'); // Ne pas interférer avec les interactions
+                    }
+                }
+                
+                benchmarks.forEach(benchmark => {
+                    const points = data.benchmarks[benchmark];
+                    if (!points || points.length === 0) return;
+                    
+                    // Filtrer les points jusqu'en décembre 2025
+                    const maxDate = new Date('2025-12-31');
+                    const filteredPoints = points.filter(p => new Date(p.date) <= maxDate);
+                    
+                    // S'assurer que les points sont triés par date pour le step chart
+                    const sortedPoints = [...filteredPoints].sort((a, b) => new Date(a.date) - new Date(b.date));
+                    
+                    // For MMLU_new, display as MMLU-Pro
+                    const displayName = benchmark === 'MMLU_new' ? 'MMLU-Pro' : benchmark;
+                    // Utiliser la couleur du groupe (getColor gère déjà MMLU_new -> MMLU-Pro)
+                    const color = getColor(benchmark);
+
+                    const path = g.append('path')
+                        .datum(sortedPoints)
+                        .attr('fill', 'none')
+                        .attr('stroke', color)
+                        .attr('stroke-width', 2.5)
+                        .attr('d', line)
+                        .attr('class', `line-${benchmark}`)
+                        .style('opacity', 0.9)
+                        .style('cursor', 'pointer');
+
+                    // Add markers at every data point for step chart
+                    g.selectAll(`.marker-${benchmark}`)
+                        .data(sortedPoints)
+                        .enter().append('circle')
+                        .attr('class', `marker-${benchmark}`)
+                        .attr('cx', d => xScale(new Date(d.date)))
+                        .attr('cy', d => yScale(d.score))
+                        .attr('r', 3.5)
+                        .attr('fill', color)
+                        .attr('stroke', 'none')
+                        .style('cursor', 'pointer')
+                        .on('mouseenter', function(ev, d) {
+                            showPointTooltip(ev, d, displayName, color);
+                        })
+                        .on('mouseleave', function() {
+                            hidePointTooltip();
+                        });
+                    
+                    // Hover sur la ligne - afficher tooltip avec le nom du benchmark
+                    path.on('mouseenter', function(ev) {
+                        highlightBenchmark(displayName);
+                        showLineTooltip(ev, displayName, color);
+                    }).on('mouseleave', function() {
+                        resetHighlight();
+                        hideLineTooltip();
+                    });
+                });
+                
+                // X axis
+                const xAxis = d3.axisBottom(xScale)
+                    .ticks(6)
+                    .tickFormat(d3.timeFormat('%b %Y'))
+                    .tickSizeOuter(0)
+                    .tickSize(6) // Taille des barres des tics
+                    .tickPadding(8); // Plus d'espace entre les ticks et les labels
+
+                g.append('g')
+                    .attr('class', 'axis axis-x')
+                    .attr('transform', `translate(0,${innerHeight})`)
+                    .call(xAxis)
+                    .call(g => g.select('.domain').remove()) // Enlever la barre de bordure
+                    .call(g => g.selectAll('.tick line').attr('stroke', themeColors.axisColor).attr('stroke-width', 1))
+                    .call(g => g.selectAll('.tick text').attr('fill', themeColors.textColor).attr('font-size', '11px').attr('opacity', 0.6));
+
+                // Y axis
+                const yAxis = d3.axisLeft(yScale)
+                    .ticks(5)
+                    .tickFormat(d => d + '%')
+                    .tickSizeOuter(0)
+                    .tickSize(6) // Taille des barres des tics
+                    .tickPadding(8); // Plus d'espace entre les ticks et les labels
+
+                g.append('g')
+                    .attr('class', 'axis axis-y')
+                    .call(yAxis)
+                    .call(g => g.select('.domain').remove()) // Enlever la barre de bordure
+                    .call(g => g.selectAll('.tick line').attr('stroke', themeColors.axisColor).attr('stroke-width', 1))
+                    .call(g => g.selectAll('.tick text').attr('fill', themeColors.textColor).attr('font-size', '11px').attr('opacity', 0.6));
+
+                
+                
+                const legendY = innerHeight + 70; // Plus d'espace entre graphique et légende
+                
+                // Créer un conteneur foreignObject pour utiliser flexbox
+                // Augmenter la hauteur pour accommoder tous les éléments (6 items * ~20px + gaps + title)
+                const legendContainer = g.append('foreignObject')
+                    .attr('x', -90) // Aligné à gauche
+                    .attr('y', legendY - 30)
+                    .attr('width', innerWidth + margin.left + margin.right) // Toute la largeur
+                    .attr('height', 200); // Hauteur suffisante pour 6 items + titre + gaps
+                
+                const legendWrapper = legendContainer.append('xhtml:div')
+                    .style('display', 'flex')
+                    .style('flex-direction', 'column')
+                    .style('align-items', 'flex-start')
+                    .style('width', '100%')
+                    .style('padding', '12px 54px');
+                
+                // Label "legend" au-dessus
+                const legendLabel = legendWrapper.append('xhtml:div')
+                    .style('font-size', '12px')
+                    .style('font-weight', '600')
+                    .style('color', 'var(--text-color)')
+                    .style('opacity', '0.8')
+                    .style('margin-bottom', '8px')
+                    .text('Domains');
+                
+                const legendDiv = legendWrapper.append('xhtml:div')
+                    .style('display', 'flex')
+                    .style('flex-direction', 'row') // Une seule ligne horizontale avec tous les groupes
+                    .style('align-items', 'flex-start')
+                    .style('justify-content', 'flex-start')
+                    .style('gap', '30px') // Gap entre les groupes
+                    .style('width', '100%')
+                    .style('flex-wrap', 'wrap') // Permettre le wrap si nécessaire
+                    .style('color', 'var(--text-color)') // Utiliser la variable CSS pour le dark mode
+                    .style('background-color', 'transparent'); // Fond transparent
+                
+                // Stocker la référence pour les mises à jour de thème
+                legendDivRef = legendWrapper;
+                
+                // Filtrer les groupes pour ne garder que ceux qui ont des benchmarks présents dans les données
+                const filteredGroups = BENCHMARK_GROUPS.map(group => {
+                    const availableBenchmarks = group.benchmarks.filter(benchmark => {
+                        // Gérer MMLU-Pro qui est stocké comme MMLU_new
+                        const dataKey = benchmark === 'MMLU-Pro' ? 'MMLU_new' : benchmark;
+                        
+                        if (!data || !data.benchmarks) return false;
+                        if (!data.benchmarks[dataKey]) return false;
+                        
+                        const benchmarkData = data.benchmarks[dataKey];
+                        return Array.isArray(benchmarkData) && benchmarkData.length > 0;
+                    });
+                    
+                    return {
+                        name: group.name,
+                        benchmarks: availableBenchmarks
+                    };
+                }).filter(group => group.benchmarks.length > 0);
+                
+                // Créer la légende par groupes (seulement les titres, détails dans tooltip)
+                filteredGroups.forEach(group => {
+                    const groupColor = getGroupBaseColor(group.name); // Couleur de base du groupe
+                    
+                    // Conteneur pour le groupe
+                    const groupDiv = legendDiv.append('xhtml:div')
+                        .style('display', 'flex')
+                        .style('align-items', 'center')
+                        .style('gap', '8px')
+                        .style('cursor', 'pointer')
+                        .style('position', 'relative')
+                        .attr('class', `legend-group legend-group-${group.name.replace(/\s+/g, '-')}`);
+                    
+                    // Carré de couleur
+                    const groupColorSquare = groupDiv.append('xhtml:div')
+                        .style('width', '14px')
+                        .style('height', '14px')
+                        .style('border-radius', '3px')
+                        .style('background-color', groupColor)
+                        .style('flex-shrink', '0');
+                    
+                    // Titre du groupe
+                    const groupTitleText = groupDiv.append('xhtml:span')
+                        .style('font-size', '11px')
+                        .style('font-weight', '600')
+                        .style('color', 'var(--text-color)')
+                        .style('opacity', '0.8')
+                        .style('white-space', 'nowrap')
+                        .text(group.name);
+                    
+                    // Créer un tooltip externe pour éviter les problèmes de positionnement dans foreignObject
+                    let legendTooltip = container.querySelector('.d3-legend-tooltip');
+                    if (!legendTooltip) {
+                        legendTooltip = d3.select(container).append('div')
+                            .attr('class', 'd3-legend-tooltip')
+                            .style('position', 'absolute')
+                            .style('padding', '8px 12px')
+                            .style('background', 'var(--surface-bg)')
+                            .style('border', '1px solid var(--border-color)')
+                            .style('border-radius', '6px')
+                            .style('box-shadow', '0 4px 12px rgba(0,0,0,0.15)')
+                            .style('font-size', '10px')
+                            .style('color', 'var(--text-color)')
+                            .style('white-space', 'nowrap')
+                            .style('opacity', '0')
+                            .style('pointer-events', 'none')
+                            .style('z-index', '10000')
+                            .style('transition', 'opacity 0.2s ease')
+                            .style('backdrop-filter', 'saturate(1.12) blur(8px)')
+                            .node();
+                    }
+                    
+                    // Hover pour afficher le tooltip et highlight tous les benchmarks du groupe
+                    groupDiv.on('mouseenter', function(ev) {
+                        const tooltip = d3.select(legendTooltip);
+                        tooltip
+                            .text(group.benchmarks.join(', '))
+                            .style('opacity', '1');
+                        
+                        // Positionner le tooltip au-dessus de l'élément
+                        const rect = this.getBoundingClientRect();
+                        const containerRect = container.getBoundingClientRect();
+                        const tooltipRect = legendTooltip.getBoundingClientRect();
+                        
+                        const left = rect.left - containerRect.left + (rect.width / 2) - (tooltipRect.width / 2);
+                        const top = rect.top - containerRect.top - tooltipRect.height - 8;
+                        
+                        tooltip
+                            .style('left', `${left}px`)
+                            .style('top', `${top}px`);
+                        
+                        // Highlight TOUS les benchmarks du groupe en même temps
+                        // D'abord, obtenir les clés de données pour tous les benchmarks du groupe
+                        const groupBenchmarkKeys = group.benchmarks.map(benchmark => {
+                            return benchmark === 'MMLU-Pro' ? 'MMLU_new' : benchmark;
+                        });
+                        
+                        // Mettre en évidence tous les benchmarks du groupe
+                        benchmarks.forEach(benchmark => {
+                            const displayName = benchmark === 'MMLU_new' ? 'MMLU-Pro' : benchmark;
+                            const isInGroup = groupBenchmarkKeys.includes(benchmark);
+                            
+                            if (isInGroup) {
+                                // Mettre en évidence la ligne sélectionnée
+                                g.selectAll(`.line-${benchmark}`).style('opacity', 1).attr('stroke-width', 3);
+                                g.selectAll(`.marker-${benchmark}`).style('opacity', 1);
+                                g.selectAll(`.legend-${displayName}`).style('opacity', 1);
+                            } else {
+                                // Ghost les autres lignes
+                                g.selectAll(`.line-${benchmark}`).style('opacity', 0.15);
+                                g.selectAll(`.marker-${benchmark}`).style('opacity', 0.15);
+                                g.selectAll(`.legend-${displayName}`).style('opacity', 0.3);
+                            }
+                        });
+                        // Ghost aussi les nuages de points
+                        g.selectAll('.scatter-point').style('opacity', 0.1);
+                    }).on('mouseleave', function() {
+                        d3.select(legendTooltip).style('opacity', '0');
+                        resetHighlight();
+                    });
+                });
+                
+            };
+            
+            // Hover functions pour les points
+            let hideTipTimer = null;
+            
+            function showPointTooltip(ev, pointData, benchmarkName, color) {
+                if (hideTipTimer) {
+                    clearTimeout(hideTipTimer);
+                    hideTipTimer = null;
+                }
+                
+                // Update theme colors
+                themeColors = getThemeColors();
+                
+                // Extraire le nom du modèle (peut contenir du HTML)
+                let modelName = pointData.model || 'N/A';
+                // Si c'est du HTML, extraire juste le texte
+                if (modelName.includes('<')) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = modelName;
+                    modelName = tempDiv.textContent || tempDiv.innerText || 'N/A';
+                }
+                
+                // Construire le contenu du tooltip avec un design amélioré et aligné à gauche
+                const score = pointData.score.toFixed(2);
+                let html = `
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border-color);">
+                        <span class="d3-tooltip__color-dot" style="background:${color};width:12px;height:12px;border-radius:2px;flex-shrink:0;"></span>
+                        <span style="font-weight:600;font-size:13px;color:var(--text-color);">${benchmarkName}</span>
+                    </div>
+                    <div style="margin-bottom:10px;text-align:left;">
+                        <div style="font-size:10px;color:var(--muted-color);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px;">Score</div>
+                        <div style="font-size:18px;font-weight:700;color:var(--text-color);line-height:1.2;text-align:left;">${score}%</div>
+                    </div>
+                    <div style="text-align:left;">
+                        <div style="font-size:10px;color:var(--muted-color);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px;">Model</div>
+                        <div style="font-size:12px;color:var(--text-color);line-height:1.5;word-break:break-word;text-align:left;">${modelName}</div>
+                    </div>
+                `;
+                
+                tipInner.innerHTML = html;
+                
+                // Update tooltip background and border colors avec variables CSS
+                tip.style.background = 'var(--surface-bg)';
+                tip.style.borderColor = 'var(--border-color)';
+                
+                // Positionner le tooltip par rapport au point
+                const rect = container.getBoundingClientRect();
+                const tipRect = tip.getBoundingClientRect();
+                const offsetX = 15;
+                const offsetY = -10;
+                
+                const tipX = ev.clientX - rect.left + offsetX;
+                const tipY = ev.clientY - rect.top + offsetY;
+                
+                // Ajuster si le tooltip sort de l'écran
+                const maxX = window.innerWidth - tipRect.width - 20;
+                const maxY = window.innerHeight - tipRect.height - 20;
+                const finalX = Math.min(tipX, maxX);
+                const finalY = Math.max(10, Math.min(tipY, maxY));
+                
+                            tip.style.opacity = '1';
+                tip.style.transform = `translate(${Math.round(finalX)}px, ${Math.round(finalY)}px)`;
+            }
+            
+            function hidePointTooltip() {
+                hideTipTimer = setTimeout(() => {
+                            tip.style.opacity = '0';
+                            tip.style.transform = 'translate(-9999px, -9999px)';
+                }, 100);
+            }
+            
+            // Tooltip pour les lignes (nom du benchmark uniquement)
+            let lineTooltip = null;
+            
+            function showLineTooltip(ev, benchmarkName, color) {
+                if (!lineTooltip) {
+                    lineTooltip = d3.select(container).append('div')
+                        .attr('class', 'd3-line-tooltip')
+                        .style('position', 'absolute')
+                        .style('padding', '6px 10px')
+                        .style('background', 'var(--surface-bg)')
+                        .style('border', '1px solid var(--border-color)')
+                        .style('border-radius', '4px')
+                        .style('font-size', '11px')
+                        .style('font-weight', '600')
+                        .style('color', 'var(--text-color)')
+                        .style('white-space', 'nowrap')
+                        .style('opacity', '0')
+                        .style('pointer-events', 'none')
+                        .style('z-index', '10000')
+                        .style('transition', 'opacity 0.15s ease')
+                        .style('box-shadow', '0 2px 8px rgba(0,0,0,0.1)')
+                        .node();
+                }
+                
+                const tooltip = d3.select(lineTooltip);
+                tooltip.text(benchmarkName);
+                
+                const rect = container.getBoundingClientRect();
+                const tooltipRect = lineTooltip.getBoundingClientRect();
+                const offsetX = 10;
+                const offsetY = -25;
+                
+                const tipX = ev.clientX - rect.left + offsetX;
+                const tipY = ev.clientY - rect.top + offsetY;
+                
+                // Ajuster si le tooltip sort de l'écran
+                const maxX = window.innerWidth - tooltipRect.width - 20;
+                const maxY = window.innerHeight - tooltipRect.height - 20;
+                const finalX = Math.min(tipX, maxX);
+                const finalY = Math.max(10, Math.min(tipY, maxY));
+                
+                tooltip
+                    .style('opacity', '1')
+                    .style('left', `${finalX}px`)
+                    .style('top', `${finalY}px`);
+            }
+            
+            function hideLineTooltip() {
+                if (lineTooltip) {
+                    d3.select(lineTooltip).style('opacity', '0');
+                }
+            }
+
+            // Load data and render
+            loadData().then(() => {
+            // First render + resize
+            if (window.ResizeObserver) {
+                const ro = new ResizeObserver(() => render());
+                ro.observe(container);
+            } else {
+                window.addEventListener('resize', render);
+            }
+                
+                // Re-render when color palette changes (if ColorPalettes supports events)
+                if (window.ColorPalettes && typeof window.ColorPalettes.refresh === 'function') {
+                    // Update colors and re-render when palette refreshes
+                    const updateColors = () => {
+                        if (data && data.benchmarks) {
+                            updateColorMap(Object.keys(data.benchmarks).sort());
+                            render();
+                        }
+                    };
+                    // Listen for custom event if available
+                    window.addEventListener('colorpalettechange', updateColors);
+                }
+                
+            render();
+            });
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+        } else { ensureD3(bootstrap); }
+    })();
+</script>

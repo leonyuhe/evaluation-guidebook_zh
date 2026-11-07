@@ -1,0 +1,572 @@
+<div class="d3-metrics-comparison"></div>
+
+<style>
+  .d3-metrics-comparison {
+    font-family: var(--default-font-family);
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: var(--spacing-4) 0;
+    width: 100%;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .d3-metrics-comparison svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .d3-metrics-comparison .node-rect {
+    stroke-width: 2;
+    transition: all 0.3s ease;
+  }
+
+  .d3-metrics-comparison .node-rect:hover {
+    filter: brightness(1.1);
+    stroke-width: 3;
+  }
+
+  .d3-metrics-comparison .input-node {
+    fill: oklch(from var(--primary-color) calc(l + 0.42) c h / 0.35);
+    stroke: oklch(from var(--primary-color) calc(l + 0.1) c h / 0.7);
+  }
+
+  .d3-metrics-comparison .method-node {
+    fill: oklch(from var(--primary-color) calc(l + 0.38) c h / 0.45);
+    stroke: var(--primary-color);
+  }
+
+  .d3-metrics-comparison .score-node {
+    fill: oklch(from var(--primary-color) calc(l + 0.35) c h / 0.55);
+    stroke: oklch(from var(--primary-color) calc(l - 0.05) calc(c * 1.2) h);
+  }
+
+  [data-theme="dark"] .d3-metrics-comparison .input-node {
+    fill: oklch(from var(--primary-color) calc(l + 0.32) c h / 0.3);
+    stroke: oklch(from var(--primary-color) calc(l + 0.05) c h / 0.75);
+  }
+
+  [data-theme="dark"] .d3-metrics-comparison .method-node {
+    fill: oklch(from var(--primary-color) calc(l + 0.28) c h / 0.4);
+    stroke: oklch(from var(--primary-color) calc(l + 0.05) calc(c * 1.1) h);
+  }
+
+  [data-theme="dark"] .d3-metrics-comparison .score-node {
+    fill: oklch(from var(--primary-color) calc(l + 0.25) c h / 0.5);
+    stroke: oklch(from var(--primary-color) calc(l) calc(c * 1.3) h);
+  }
+
+  .d3-metrics-comparison .node-label {
+    fill: var(--text-color);
+    font-size: 13px;
+    font-weight: 600;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .d3-metrics-comparison .node-sublabel {
+    fill: var(--muted-color);
+    font-size: 10px;
+    font-weight: 500;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .d3-metrics-comparison .node-example {
+    fill: var(--text-color);
+    font-size: 10px;
+    font-weight: 500;
+    font-style: italic;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .d3-metrics-comparison .link-path {
+    fill: none;
+    stroke: oklch(from var(--primary-color) l c h / 0.4);
+    stroke-width: 2;
+    transition: all 0.3s ease;
+  }
+
+  [data-theme="dark"] .d3-metrics-comparison .link-path {
+    stroke: oklch(from var(--primary-color) l c h / 0.5);
+  }
+
+  .d3-metrics-comparison .link-path:hover {
+    stroke: var(--primary-color);
+    stroke-width: 3;
+  }
+
+  .d3-metrics-comparison .link-label {
+    fill: var(--text-color);
+    font-size: 10px;
+    font-weight: 600;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .d3-metrics-comparison .score-badge {
+    fill: var(--primary-color);
+    font-size: 14px;
+    font-weight: 700;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .d3-metrics-comparison .score-badge-bg {
+    fill: var(--surface-bg);
+    stroke: var(--primary-color);
+    stroke-width: 2;
+  }
+
+  .d3-metrics-comparison .section-title {
+    fill: var(--primary-color);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  [data-theme="dark"] .d3-metrics-comparison .section-title {
+    fill: oklch(from var(--primary-color) calc(l + 0.1) calc(c * 1.2) h);
+  }
+
+  .d3-metrics-comparison .marker {
+    fill: oklch(from var(--primary-color) l c h / 0.6);
+  }
+
+  .d3-metrics-comparison .tooltip {
+    position: absolute;
+    background: var(--surface-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    max-width: 350px;
+    line-height: 1.5;
+    white-space: pre-line;
+    color: var(--text-color);
+  }
+
+  .d3-metrics-comparison .tooltip.visible {
+    opacity: 1;
+  }
+
+  @media (max-width: 768px) {
+    .d3-metrics-comparison .node-label {
+      font-size: 11px;
+    }
+
+    .d3-metrics-comparison .node-sublabel {
+      font-size: 9px;
+    }
+
+    .d3-metrics-comparison .node-example {
+      font-size: 9px;
+    }
+
+    .d3-metrics-comparison .link-label {
+      font-size: 9px;
+    }
+
+    .d3-metrics-comparison .score-badge {
+      font-size: 12px;
+    }
+  }
+</style>
+
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => {
+        if (window.d3 && typeof window.d3.select === 'function') cb();
+      };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-metrics-comparison'))) {
+        const candidates = Array.from(document.querySelectorAll('.d3-metrics-comparison'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+
+      if (!container) return;
+
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      container.style.position = 'relative';
+
+      // Tooltip
+      const tooltip = document.createElement('div');
+      tooltip.className = 'tooltip';
+      container.appendChild(tooltip);
+
+      // Data structure: inputs -> methods -> scores
+      const data = {
+        inputs: [
+          {
+            id: 'prediction',
+            label: 'Prediction',
+            sublabel: '(model output)',
+            example: '"Evaluation is an amazing topic"'
+          },
+          {
+            id: 'reference',
+            label: 'Reference',
+            sublabel: '(ground truth)',
+            example: '"Evaluation is amazing"'
+          }
+        ],
+        methods: [
+          {
+            id: 'exact',
+            label: 'Exact Match',
+            sublabel: 'token sequences',
+            score: '0',
+            description: 'Strings don\'t match exactly—missing words "an" and "topic"',
+            scoreType: 'binary'
+          },
+          {
+            id: 'bleu',
+            label: 'BLEU',
+            sublabel: 'n-gram overlap',
+            score: '0.13',
+            description: 'Actual BLEU computation:\n• BLEU-1 (unigrams): 0.60 (3/5 match)\n• BLEU-2 (bigrams): 0.39 (1/4 match)\n• BLEU-3 (trigrams): 0.17 (0/3 match)\n• Final BLEU (geometric mean): 0.13\n• Brevity penalty reduces score (prediction > reference)',
+            scoreType: 'continuous'
+          },
+          {
+            id: 'rouge',
+            label: 'ROUGE',
+            sublabel: 'recall-oriented',
+            score: '0.75',
+            description: 'ROUGE-1 (unigram) scores:\n• Recall: 3/3 = 100% (all reference words found in prediction)\n• Precision: 3/5 = 60% (prediction words in reference)\n• F1 score: 0.75\nReference: ["evaluation", "is", "amazing"]',
+            scoreType: 'continuous'
+          },
+          {
+            id: 'bleurt',
+            label: 'BLEURT',
+            sublabel: 'semantic similarity',
+            score: '0.85',
+            description: 'High semantic similarity—both express positive sentiment about evaluation',
+            scoreType: 'continuous'
+          }
+        ],
+        scores: [
+          {
+            id: 'binary',
+            label: 'Binary Score',
+            sublabel: 'correct/incorrect'
+          },
+          {
+            id: 'continuous',
+            label: 'Continuous Score',
+            sublabel: '0.0 to 1.0'
+          }
+        ]
+      };
+
+      const svg = d3.select(container).append('svg');
+      const g = svg.append('g');
+
+      // Arrow marker
+      svg.append('defs').append('marker')
+        .attr('id', 'arrowhead')
+        .attr('viewBox', '0 -5 10 10')
+        .attr('refX', 8)
+        .attr('refY', 0)
+        .attr('markerWidth', 6)
+        .attr('markerHeight', 6)
+        .attr('orient', 'auto')
+        .append('path')
+        .attr('d', 'M0,-5L10,0L0,5')
+        .attr('class', 'marker');
+
+      let width = 800;
+      let height = 500;
+
+      function wrapText(text, maxWidth) {
+        const words = text.split(' ');
+        const lines = [];
+        let currentLine = words[0];
+
+        for (let i = 1; i < words.length; i++) {
+          const word = words[i];
+          const testLine = currentLine + ' ' + word;
+          if (testLine.length * 6 < maxWidth) {
+            currentLine = testLine;
+          } else {
+            lines.push(currentLine);
+            currentLine = word;
+          }
+        }
+        lines.push(currentLine);
+        return lines;
+      }
+
+      function render() {
+        width = container.clientWidth || 800;
+        height = Math.max(500, Math.round(width * 0.7));
+
+        svg.attr('width', width).attr('height', height);
+
+        const margin = { top: 40, right: 20, bottom: 20, left: 20 };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        g.attr('transform', `translate(${margin.left},${margin.top})`);
+
+        // Clear previous content
+        g.selectAll('*').remove();
+
+        // Column positions with increased horizontal spacing
+        const nodeWidth = Math.min(150, innerWidth * 0.2);
+        const nodeHeight = 85;
+        const gapBetweenColumns = Math.max(80, innerWidth * 0.15);
+
+        // Calculate column centers with larger gaps
+        const col1X = nodeWidth / 2 + 20;
+        const col2X = col1X + nodeWidth / 2 + gapBetweenColumns + nodeWidth / 2;
+        const col3X = col2X + nodeWidth / 2 + gapBetweenColumns + nodeWidth / 2;
+
+        // Section titles
+        g.selectAll('.section-title')
+          .data([
+            { x: col1X, label: 'INPUTS' },
+            { x: col2X, label: 'COMPARISON METHODS' },
+            { x: col3X, label: 'SCORES' }
+          ])
+          .join('text')
+          .attr('class', 'section-title')
+          .attr('x', d => d.x)
+          .attr('y', -15)
+          .attr('text-anchor', 'middle')
+          .text(d => d.label);
+
+        // Calculate positions
+        const inputY = innerHeight * 0.25;
+        const methodStartY = 40;
+        const methodSpacing = (innerHeight - methodStartY - nodeHeight) / (data.methods.length - 1);
+
+        // Position score nodes to align with specific methods
+        // Binary score aligns with Exact Match (index 0)
+        // Continuous score aligns with ROUGE (index 2)
+        const exactMatchY = methodStartY + 0 * methodSpacing;
+        const rougeY = methodStartY + 2 * methodSpacing;
+
+        // Position nodes
+        const inputNodes = data.inputs.map((d, i) => ({
+          ...d,
+          x: col1X - nodeWidth / 2,
+          y: inputY + i * (nodeHeight + 30),
+          width: nodeWidth,
+          height: nodeHeight,
+          type: 'input'
+        }));
+
+        const methodNodes = data.methods.map((d, i) => ({
+          ...d,
+          x: col2X - nodeWidth / 2,
+          y: methodStartY + i * methodSpacing,
+          width: nodeWidth,
+          height: nodeHeight,
+          type: 'method'
+        }));
+
+        const scoreNodes = data.scores.map((d, i) => {
+          // Binary score aligns with Exact Match, Continuous with ROUGE
+          const yPos = d.id === 'binary' ? exactMatchY : rougeY;
+          return {
+            ...d,
+            x: col3X - nodeWidth / 2,
+            y: yPos,
+            width: nodeWidth,
+            height: nodeHeight,
+            type: 'score'
+          };
+        });
+
+        const allNodes = [...inputNodes, ...methodNodes, ...scoreNodes];
+
+        // Create links: inputs -> methods -> scores
+        const links = [];
+
+        // Each input connects to all methods
+        inputNodes.forEach(input => {
+          methodNodes.forEach(method => {
+            links.push({
+              source: input,
+              target: method,
+              type: 'input-method'
+            });
+          });
+        });
+
+        // Each method connects to appropriate score type
+        methodNodes.forEach(method => {
+          const targetScore = scoreNodes.find(s => s.id === method.scoreType);
+          if (targetScore) {
+            links.push({
+              source: method,
+              target: targetScore,
+              type: 'method-score',
+              score: method.score
+            });
+          }
+        });
+
+        // Draw links
+        const linkGroup = g.append('g').attr('class', 'links');
+
+        linkGroup.selectAll('.link-path')
+          .data(links)
+          .join('path')
+          .attr('class', 'link-path')
+          .attr('d', d => {
+            const sx = d.source.x + d.source.width;
+            const sy = d.source.y + d.source.height / 2;
+            const tx = d.target.x;
+            const ty = d.target.y + d.target.height / 2;
+            const mx = (sx + tx) / 2;
+            return `M ${sx} ${sy} C ${mx} ${sy}, ${mx} ${ty}, ${tx} ${ty}`;
+          })
+          .attr('marker-end', 'url(#arrowhead)');
+
+        // Add score badges on method->score links
+        const scoreBadges = linkGroup.selectAll('.score-badge-group')
+          .data(links.filter(d => d.type === 'method-score'))
+          .join('g')
+          .attr('class', 'score-badge-group')
+          .attr('transform', d => {
+            const sx = d.source.x + d.source.width;
+            const sy = d.source.y + d.source.height / 2;
+            const tx = d.target.x;
+            const ty = d.target.y + d.target.height / 2;
+            const mx = (sx + tx) / 2;
+            const my = (sy + ty) / 2;
+            return `translate(${mx}, ${my})`;
+          });
+
+        scoreBadges.append('rect')
+          .attr('class', 'score-badge-bg')
+          .attr('x', -20)
+          .attr('y', -12)
+          .attr('width', 40)
+          .attr('height', 24)
+          .attr('rx', 6);
+
+        scoreBadges.append('text')
+          .attr('class', 'score-badge')
+          .attr('text-anchor', 'middle')
+          .attr('dominant-baseline', 'middle')
+          .text(d => d.score);
+
+        // Draw nodes
+        const nodeGroup = g.append('g').attr('class', 'nodes');
+
+        const nodes = nodeGroup.selectAll('.node')
+          .data(allNodes)
+          .join('g')
+          .attr('class', 'node')
+          .attr('transform', d => `translate(${d.x},${d.y})`)
+          .style('cursor', 'pointer');
+
+        nodes.append('rect')
+          .attr('class', d => `node-rect ${d.type}-node`)
+          .attr('width', d => d.width)
+          .attr('height', d => d.height)
+          .attr('rx', 8)
+          .on('mouseenter', function(event, d) {
+            if (d.description) {
+              tooltip.textContent = d.description;
+              tooltip.classList.add('visible');
+              const rect = container.getBoundingClientRect();
+              tooltip.style.left = (event.clientX - rect.left + 10) + 'px';
+              tooltip.style.top = (event.clientY - rect.top + 10) + 'px';
+            }
+          })
+          .on('mouseleave', function() {
+            tooltip.classList.remove('visible');
+          });
+
+        nodes.append('text')
+          .attr('class', 'node-label')
+          .attr('x', d => d.width / 2)
+          .attr('y', 18)
+          .attr('text-anchor', 'middle')
+          .text(d => d.label);
+
+        nodes.append('text')
+          .attr('class', 'node-sublabel')
+          .attr('x', d => d.width / 2)
+          .attr('y', 32)
+          .attr('text-anchor', 'middle')
+          .text(d => d.sublabel);
+
+        // Add example text to input nodes
+        nodes.filter(d => d.type === 'input' && d.example)
+          .each(function(d) {
+            const node = d3.select(this);
+            const lines = wrapText(d.example, d.width - 16);
+            lines.forEach((line, i) => {
+              node.append('text')
+                .attr('class', 'node-example')
+                .attr('x', d.width / 2)
+                .attr('y', 48 + i * 12)
+                .attr('text-anchor', 'middle')
+                .text(line);
+            });
+          });
+
+        // Score is shown on the arrows, not in the method nodes
+
+        // Add aggregation info to score nodes
+        nodes.filter(d => d.type === 'score' && d.aggregations)
+          .append('text')
+          .attr('class', 'node-sublabel')
+          .attr('x', d => d.width / 2)
+          .attr('y', d => d.height - 12)
+          .attr('text-anchor', 'middle')
+          .attr('font-size', '9px')
+          .text(d => `${d.aggregations.slice(0, 2).join(', ')}...`);
+      }
+
+      render();
+
+      // Responsive handling
+      if (window.ResizeObserver) {
+        const ro = new ResizeObserver(() => render());
+        ro.observe(container);
+      } else {
+        window.addEventListener('resize', render);
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    } else {
+      ensureD3(bootstrap);
+    }
+  })();
+</script>

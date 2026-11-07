@@ -1,0 +1,161 @@
+<div class="evaluation-purposes"></div>
+
+<style>
+  .evaluation-purposes {
+    font-family: var(--default-font-family);
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .evaluation-purposes .purposes-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-4);
+    margin-bottom: 0;
+  }
+
+  .evaluation-purposes .purpose-card {
+    background: oklch(from var(--primary-color) calc(l + 0.4) c h / 0.35);
+    border: 1px solid oklch(from var(--primary-color) calc(l + 0.15) c h / 0.6);
+    border-radius: 16px;
+    padding: var(--spacing-5) var(--spacing-5);
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    min-height: 180px;
+  }
+
+  /* Dark mode adjustments for better readability */
+  [data-theme="dark"] .evaluation-purposes .purpose-card {
+    background: oklch(from var(--primary-color) calc(l + 0.3) c h / 0.25);
+    border-color: oklch(from var(--primary-color) calc(l + 0.1) c h / 0.65);
+  }
+
+  .evaluation-purposes .purpose-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: var(--spacing-3);
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Dark mode adjustments for better readability */
+  [data-theme="dark"] .evaluation-purposes .purpose-title {
+    color: oklch(from var(--primary-color) calc(l + 0.1) calc(c * 1.2) h);
+  }
+
+  .evaluation-purposes .purpose-items {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-color);
+    line-height: 1.7;
+    font-weight: 500;
+    position: relative;
+    z-index: 1;
+  }
+
+  .evaluation-purposes .purpose-items li {
+    padding-left: 1.6em;
+    position: relative;
+    margin-bottom: var(--spacing-1);
+  }
+
+  .evaluation-purposes .purpose-items li::before {
+    content: "-";
+    position: absolute;
+    left: 0;
+    top: 0;
+    color: var(--primary-color);
+    font-weight: 600;
+  }
+
+  /* Dark mode adjustments for better readability */
+  [data-theme="dark"] .evaluation-purposes .purpose-items {
+    color: var(--text-color);
+  }
+
+  @media (max-width: 1024px) {
+    .evaluation-purposes .purposes-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .evaluation-purposes {
+      padding: var(--spacing-5) var(--spacing-4);
+    }
+
+    .evaluation-purposes .purposes-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  (() => {
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('evaluation-purposes'))) {
+        const candidates = Array.from(document.querySelectorAll('.evaluation-purposes'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+
+      if (!container) return;
+
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Create the evaluation purposes structure
+      container.innerHTML = `
+        <div class="purposes-grid">
+          <div class="purpose-card">
+            <div class="purpose-title">Model Builders</div>
+            <ul class="purpose-items">
+              <li>Is this model training correctly?</li>
+              <li>Non-regression testing & ablations</li>
+              <li>Compare training approaches</li>
+            </ul>
+          </div>
+
+          <div class="purpose-card">
+            <div class="purpose-title">Model Users</div>
+            <ul class="purpose-items">
+              <li>Which model is best on &lt;task&gt;?</li>
+              <li>Compare models & rankings</li>
+              <li>Design custom evaluations</li>
+            </ul>
+          </div>
+
+          <div class="purpose-card">
+            <div class="purpose-title">Researchers</div>
+            <ul class="purpose-items">
+              <li>What capabilities exist?</li>
+              <li>What is the state of progress?</li>
+            </ul>
+          </div>
+        </div>
+      `;
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
+    } else {
+      bootstrap();
+    }
+  })();
+</script>

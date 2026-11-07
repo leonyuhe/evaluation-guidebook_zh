@@ -1,0 +1,352 @@
+<div class="d3-human-biases"></div>
+
+<style>
+  .d3-human-biases {
+    font-family: var(--default-font-family);
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: var(--spacing-4) 0;
+    width: 100%;
+    margin: 0 auto;
+    position: relative;
+    box-shadow: none !important;
+  }
+
+  .d3-human-biases svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .d3-human-biases .card-rect {
+    stroke-width: 2;
+    transition: all 0.3s ease;
+  }
+
+  .d3-human-biases .bias-title {
+    fill: var(--text-color);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .d3-human-biases .bias-description {
+    fill: var(--text-color);
+    font-size: 10px;
+    font-weight: 400;
+    line-height: 1.4;
+  }
+
+  .d3-human-biases .header-text {
+    fill: var(--text-color);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .d3-human-biases .example-label {
+    fill: var(--muted-color);
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  @media (max-width: 768px) {
+    .d3-human-biases .bias-title {
+      font-size: 10px;
+    }
+
+    .d3-human-biases .bias-description {
+      font-size: 9px;
+    }
+  }
+</style>
+
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => {
+        if (window.d3 && typeof window.d3.select === 'function') cb();
+      };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-human-biases'))) {
+        const candidates = Array.from(document.querySelectorAll('.d3-human-biases'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+
+      if (!container) return;
+
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Get colors from ColorPalettes or fallback
+      const getColors = () => {
+        if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
+          return window.ColorPalettes.getColors('categorical', 4);
+        }
+        return ['#e74c3c', '#3498db', '#9b59b6', '#f39c12'];
+      };
+
+      // Human evaluation biases
+      const biases = [
+        {
+          id: 'first-impression',
+          title: 'First Impressions',
+          description: 'Quality estimated from first impressions rather than actual content',
+          example: 'Well-formatted answer rated higher despite errors',
+          reference: 'arxiv.org/abs/2309.16349'
+        },
+        {
+          id: 'tone',
+          title: 'Tone Bias',
+          description: 'Underestimation of the number of factual or logical errors in an assertive answer',
+          example: 'Assertive wrong answer > Neutral correct answer',
+          reference: 'arxiv.org/abs/2309.16349'
+        },
+        {
+          id: 'self-preference',
+          title: 'Self-Preference',
+          description: 'Preference for answers aligning with own views, opinons and beliefs',
+          example: 'Personal beliefs > Factual correctness',
+          reference: 'arxiv.org/abs/2310.13548'
+        },
+        {
+          id: 'identity',
+          title: 'Identity Bias',
+          description: 'Different identity groups rate answers differently',
+          example: 'Varied toxicity ratings across demographics',
+          reference: 'arxiv.org/abs/2205.00501',
+          reference2: 'arxiv.org/abs/2404.16019'
+        }
+      ];
+
+      const svg = d3.select(container).append('svg');
+      const g = svg.append('g');
+
+      let width = 800;
+      let height = 300;
+
+      // Helper function to wrap text
+      function wrapText(text, width) {
+        text.each(function() {
+          const text = d3.select(this);
+          const words = text.text().split(/\s+/).reverse();
+          let word;
+          let line = [];
+          let lineNumber = 0;
+          const lineHeight = 1.3;
+          const y = text.attr('y');
+          const x = text.attr('x');
+          const dy = parseFloat(text.attr('dy') || 0);
+          let tspan = text.text(null).append('tspan')
+            .attr('x', x)
+            .attr('y', y)
+            .attr('dy', dy + 'em');
+
+          while ((word = words.pop())) {
+            line.push(word);
+            tspan.text(line.join(' '));
+            if (tspan.node().getComputedTextLength() > width) {
+              line.pop();
+              tspan.text(line.join(' '));
+              line = [word];
+              tspan = text.append('tspan')
+                .attr('x', x)
+                .attr('y', y)
+                .attr('dy', ++lineNumber * lineHeight + dy + 'em')
+                .text(word);
+            }
+          }
+        });
+      }
+
+      function render() {
+        width = container.clientWidth || 800;
+        height = Math.max(320, Math.round(width * 0.4));
+
+        svg.attr('width', width).attr('height', height);
+
+        const margin = { top: 40, right: 20, bottom: 20, left: 20 };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        g.attr('transform', `translate(${margin.left},${margin.top})`);
+
+        // Clear previous content
+        g.selectAll('*').remove();
+
+        const colors = getColors();
+
+        // Header
+        g.append('text')
+          .attr('class', 'header-text')
+          .attr('x', innerWidth / 2)
+          .attr('y', -15)
+          .attr('text-anchor', 'middle')
+          .text('HUMAN EVALUATION BIASES');
+
+        // Calculate card dimensions - 2x2 grid
+        const cols = 2;
+        const rows = 2;
+        const cardSpacingX = Math.min(20, innerWidth * 0.03);
+        const cardSpacingY = Math.min(15, innerHeight * 0.05);
+        const cardWidth = (innerWidth - cardSpacingX * (cols - 1)) / cols;
+        const cardHeight = (innerHeight - cardSpacingY * (rows - 1)) / rows;
+
+        // Draw cards in 2x2 grid
+        biases.forEach((bias, i) => {
+          const col = i % cols;
+          const row = Math.floor(i / cols);
+          const x = col * (cardWidth + cardSpacingX);
+          const y = row * (cardHeight + cardSpacingY);
+
+          const cardGroup = g.append('g')
+            .attr('transform', `translate(${x},${y})`);
+
+          // Card background with frame
+          cardGroup.append('rect')
+            .attr('class', 'card-rect')
+            .attr('width', cardWidth)
+            .attr('height', cardHeight)
+            .attr('rx', 12)
+            .attr('fill', colors[i])
+            .attr('fill-opacity', 0.12)
+            .attr('stroke', colors[i])
+            .attr('stroke-opacity', 0.6)
+            .attr('stroke-width', 2);
+
+          // Title
+          cardGroup.append('text')
+            .attr('class', 'bias-title')
+            .attr('x', cardWidth / 2)
+            .attr('y', 20)
+            .attr('text-anchor', 'middle')
+            .text(bias.title);
+
+          // Description with wrapping
+          const descText = cardGroup.append('text')
+            .attr('class', 'bias-description')
+            .attr('x', cardWidth / 2)
+            .attr('y', 38)
+            .attr('text-anchor', 'middle')
+            .attr('dy', 0)
+            .text(bias.description);
+
+          wrapText(descText, cardWidth - 20);
+
+          // Example box
+          const exampleY = cardHeight - 52;
+          const exampleHeight = 22;
+
+          cardGroup.append('rect')
+            .attr('x', 8)
+            .attr('y', exampleY)
+            .attr('width', cardWidth - 16)
+            .attr('height', exampleHeight)
+            .attr('rx', 4)
+            .attr('fill', colors[i])
+            .attr('fill-opacity', 0.15)
+            .attr('stroke', colors[i])
+            .attr('stroke-width', 1)
+            .attr('stroke-opacity', 0.4);
+
+          // Example text
+          const exampleText = cardGroup.append('text')
+            .attr('class', 'bias-description')
+            .attr('x', cardWidth / 2)
+            .attr('y', exampleY + 13)
+            .attr('text-anchor', 'middle')
+            .attr('dominant-baseline', 'middle')
+            .attr('font-size', 9)
+            .text(bias.example);
+
+          // Reference links (if exist)
+          if (bias.reference) {
+            const refLink1 = cardGroup.append('a')
+              .attr('href', `https://${bias.reference}`)
+              .attr('target', '_blank')
+              .attr('rel', 'noopener noreferrer');
+
+            refLink1.append('text')
+              .attr('class', 'example-label')
+              .attr('x', cardWidth - 10)
+              .attr('y', bias.reference2 ? cardHeight - 18 : cardHeight - 8)
+              .attr('text-anchor', 'end')
+              .attr('font-size', 8)
+              .attr('fill', colors[i])
+              .attr('opacity', 0.7)
+              .style('cursor', 'pointer')
+              .style('text-decoration', 'underline')
+              .text(bias.reference)
+              .on('mouseenter', function() {
+                d3.select(this).attr('opacity', 1);
+              })
+              .on('mouseleave', function() {
+                d3.select(this).attr('opacity', 0.7);
+              });
+          }
+
+          if (bias.reference2) {
+            const refLink2 = cardGroup.append('a')
+              .attr('href', `https://${bias.reference2}`)
+              .attr('target', '_blank')
+              .attr('rel', 'noopener noreferrer');
+
+            refLink2.append('text')
+              .attr('class', 'example-label')
+              .attr('x', cardWidth - 10)
+              .attr('y', cardHeight - 8)
+              .attr('text-anchor', 'end')
+              .attr('font-size', 8)
+              .attr('fill', colors[i])
+              .attr('opacity', 0.7)
+              .style('cursor', 'pointer')
+              .style('text-decoration', 'underline')
+              .text(bias.reference2)
+              .on('mouseenter', function() {
+                d3.select(this).attr('opacity', 1);
+              })
+              .on('mouseleave', function() {
+                d3.select(this).attr('opacity', 0.7);
+              });
+          }
+        });
+      }
+
+      render();
+
+      // Responsive handling
+      if (window.ResizeObserver) {
+        const ro = new ResizeObserver(() => render());
+        ro.observe(container);
+      } else {
+        window.addEventListener('resize', render);
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    } else {
+      ensureD3(bootstrap);
+    }
+  })();
+</script>

@@ -1,0 +1,1142 @@
+<!-- 
+  Two Line Charts Side-by-Side
+  
+  A configurable side-by-side display of two line charts with zoom/pan, smoothing, and hover tooltips.
+  Designed to replace Plotly charts showing comparative metrics (e.g., Good vs Bad examples).
+  
+  Configuration via data-config attribute:
+  {
+    "charts": [
+      { 
+        "title": "✅ Good Example",
+        "language": "French",
+        "task": "mlmm_hellaswag_fra_cf",
+        "metric": "acc_norm_token"
+      },
+      { 
+        "title": "❌ Bad Example",
+        "language": "Arabic", 
+        "task": "mlmm_truthfulqa_ara_cf:mc1",
+        "metric": "acc_norm_token"
+      }
+    ],
+        "statLabel": "Monotonicity",  // Label for the stat value (e.g., "Monotonicity", "SNR", etc.)
+        "groupSeeds": true,  // If false, show each seed separately; if true, group by runname and average
+        "smoothingWindow": 3,
+        "smoothingCurve": "monotoneX",
+        "xAxisLabel": "Tokens (B)",
+        "yAxisLabel": "Score",
+        "baseUrl": "./finetasks/data"
+      }
+  
+  CSV format expected: run_name, tokens, score, ...
+  
+  Example usage in MDX:
+  <HtmlEmbed 
+    src="embeds/d3-two-lines-chart.html" 
+    config={{ 
+      charts: [
+        { title: "✅ Good", language: "French", task: "mlmm_hellaswag_fra_cf", metric: "acc_norm_token" },
+        { title: "❌ Bad", language: "Arabic", task: "mlmm_truthfulqa_ara_cf:mc1", metric: "acc_norm_token" }
+      ]
+    }} 
+  />
+-->
+<div class="d3-two-charts"></div>
+<style>
+  .d3-two-charts {
+    position: relative;
+    width: 100%;
+  }
+
+  /* Flex container like Plotly */
+  .d3-two-charts__grid {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .chart-cell {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    padding: 16px;
+    box-shadow: inset 0 0 0 1px var(--border-color);
+    border-radius: 8px;
+    background: var(--surface-bg, #fff);
+    flex: 1;
+    min-width: 300px;
+    box-sizing: border-box;
+  }
+
+  .chart-cell__title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-color);
+    margin-bottom: 12px;
+  }
+
+  .chart-cell__stat {
+    margin-top: 16px;
+    padding: 10px 12px;
+    background: var(--page-bg, #f9fafb);
+    border-radius: 6px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-color);
+    border: 1px solid var(--border-color, #e5e7eb);
+  }
+
+  .chart-cell__stat-label {
+    font-weight: 600;
+    margin-right: 6px;
+  }
+
+  .chart-cell__stat-value {
+    font-weight: 700;
+    font-size: 15px;
+  }
+
+  .chart-cell__body {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .chart-cell__body svg {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Legend */
+  .chart-cell__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    justify-content: center;
+    margin-top: 12px;
+    font-size: 11px;
+    color: var(--text-color);
+  }
+
+  .chart-cell__legend .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .chart-cell__legend .swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    border: 1px solid var(--border-color);
+    display: inline-block;
+  }
+
+  /* Reset button */
+  .chart-cell .reset-button {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 10;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: var(--surface-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+  }
+
+  .chart-cell .reset-button:hover {
+    background: var(--page-bg);
+  }
+
+  /* Axes */
+  .d3-two-charts .axes path.domain {
+    stroke: var(--axis-color, #e5e7eb);
+    stroke-width: 1;
+  }
+
+  .d3-two-charts .axes line {
+    stroke: var(--axis-color, #e5e7eb);
+  }
+
+  .d3-two-charts .axes text {
+    fill: var(--tick-color, #6b7280);
+    font-size: 10px;
+  }
+
+  .d3-two-charts .axis-label {
+    fill: var(--text-color);
+    font-size: 10px;
+    font-weight: 300;
+    opacity: 0.7;
+    stroke: var(--page-bg, white);
+    stroke-width: 3px;
+    paint-order: stroke fill;
+  }
+
+  .d3-two-charts .grid line {
+    stroke: var(--grid-color, #f3f4f6);
+  }
+
+  /* Lines */
+  .d3-two-charts path.main-line {
+    transition: opacity 0.2s ease;
+  }
+
+  .d3-two-charts path.ghost-line {
+    transition: opacity 0.6s ease;
+  }
+
+  /* Ghosting on hover */
+  .d3-two-charts.hovering path.main-line.ghost {
+    opacity: .25;
+  }
+
+  .d3-two-charts.hovering path.ghost-line.ghost {
+    opacity: .05;
+  }
+
+  .d3-two-charts.hovering .chart-cell__legend .item.ghost {
+    opacity: .35;
+  }
+
+  /* Tooltip */
+  .d3-two-charts .d3-tooltip {
+    z-index: 20;
+    backdrop-filter: saturate(1.12) blur(8px);
+  }
+
+  .d3-two-charts .d3-tooltip__inner {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 180px;
+  }
+
+  .d3-two-charts .d3-tooltip__inner>div:first-child {
+    font-weight: 800;
+    letter-spacing: 0.1px;
+    margin-bottom: 0;
+  }
+
+  .d3-two-charts .d3-tooltip__inner>div:nth-child(2) {
+    font-size: 11px;
+    color: var(--muted-color, #9ca3af);
+    display: block;
+    margin-top: -4px;
+    margin-bottom: 2px;
+    letter-spacing: 0.1px;
+  }
+
+  .d3-two-charts .d3-tooltip__inner>div:nth-child(n+3) {
+    padding-top: 6px;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .d3-two-charts .d3-tooltip__color-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+  }
+</style>
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) { s = document.createElement('script'); s.id = 'd3-cdn-script'; s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js'; document.head.appendChild(s); }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true }); if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-two-charts'))) {
+        const cs = Array.from(document.querySelectorAll('.d3-two-charts')).filter(el => !(el.dataset && el.dataset.mounted === 'true'));
+        container = cs[cs.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) { if (container.dataset.mounted === 'true') return; container.dataset.mounted = 'true'; }
+
+      const d3 = window.d3;
+
+      // Language mapping
+      const languageMap = {
+        'Arabic': 'ar', 'Turkish': 'tr', 'Swahili': 'sw', 'Russian': 'ru',
+        'Telugu': 'te', 'Thai': 'th', 'Chinese': 'zh', 'French': 'fr', 'Hindi': 'hi'
+      };
+
+      // Run name mapping (same as Plotly version)
+      const runNameMap = {
+        "orion": "Dataset-A",
+        "helios": "Dataset-B",
+        "lynx": "Dataset-C",
+        "aquila": "Dataset-D",
+        "commoncrawl": "CommonCrawl",
+        "baseline": "Baseline"
+      };
+
+      function processRunName(runname) {
+        if (!runname || typeof runname !== 'string') {
+          return String(runname || 'Unknown');
+        }
+        for (const [key, value] of Object.entries(runNameMap)) {
+          if (runname.toLowerCase().includes(key.toLowerCase())) {
+            return value;
+          }
+        }
+        return runname;
+      }
+
+      // Read config from HtmlEmbed props
+      function readEmbedConfig() {
+        let mountEl = container;
+        while (mountEl && !mountEl.getAttribute?.('data-config')) {
+          mountEl = mountEl.parentElement;
+        }
+
+        let providedConfig = null;
+        try {
+          const cfg = mountEl && mountEl.getAttribute ? mountEl.getAttribute('data-config') : null;
+          if (cfg && cfg.trim()) {
+            providedConfig = cfg.trim().startsWith('{') ? JSON.parse(cfg) : cfg;
+          }
+        } catch (e) {
+          console.error('Failed to parse data-config', e);
+        }
+        return providedConfig || {};
+      }
+
+      const embedConfig = readEmbedConfig();
+
+      // Configuration
+      const CONFIG = {
+        charts: embedConfig.charts || [],
+        smoothing: embedConfig.smoothing !== undefined ? embedConfig.smoothing : false,
+        smoothingWindow: embedConfig.smoothingWindow || 3,
+        smoothingCurve: embedConfig.smoothingCurve || 'monotoneX',
+        chartHeight: 280,
+        margin: { top: 20, right: 20, bottom: 40, left: 50 },
+        zoomExtent: [1.0, 8],
+        xAxisLabel: embedConfig.xAxisLabel || 'Tokens (B)',
+        yAxisLabel: embedConfig.yAxisLabel || 'Score',
+        baseUrl: embedConfig.baseUrl || './finetasks/data',
+        statLabel: embedConfig.statLabel || null,  // e.g., "Monotonicity", "SNR", "Randomness", etc.
+        statColumn: embedConfig.statColumn || 'avg_spearman',  // Column name in stats CSV
+        groupSeeds: embedConfig.groupSeeds !== undefined ? embedConfig.groupSeeds : true  // Group seeds or show separately
+      };
+
+      // Mapping from stat label to column name (for convenience)
+      const statColumnMap = {
+        'Monotonicity': 'avg_spearman',
+        'SNR': 'avg_snr',
+        'Kendall\'s Tau': 'avg_kendall_tau_a',
+        'Distance from baseline': 'max_n_std',  // Non-Randomness metric
+        'Non-Randomness': 'max_n_std',
+        'Randomness': 'max_n_std'
+      };
+
+      // Auto-detect column from label if not specified
+      if (CONFIG.statLabel && !embedConfig.statColumn && statColumnMap[CONFIG.statLabel]) {
+        CONFIG.statColumn = statColumnMap[CONFIG.statLabel];
+      }
+
+      if (!CONFIG.charts.length || CONFIG.charts.length !== 2) {
+        container.innerHTML = '<p style="color: var(--danger); font-size: 12px;">Error: Exactly 2 charts must be configured</p>';
+        return;
+      }
+
+      // Create grid
+      const grid = document.createElement('div');
+      grid.className = 'd3-two-charts__grid';
+      container.appendChild(grid);
+
+      // Create chart cells
+      CONFIG.charts.forEach((chartConfig, idx) => {
+        const cell = document.createElement('div');
+        cell.className = 'chart-cell';
+        cell.innerHTML = `
+        <div class="chart-cell__title">${chartConfig.title}</div>
+        <button class="reset-button">Reset</button>
+        <div class="chart-cell__body"></div>
+        <div class="chart-cell__legend"></div>
+        <div class="chart-cell__stat"></div>
+      `;
+        grid.appendChild(cell);
+      });
+
+      // Smoothing
+      const getCurve = (smooth) => {
+        if (!smooth) return d3.curveLinear;
+        switch (CONFIG.smoothingCurve) {
+          case 'catmullRom': return d3.curveCatmullRom.alpha(0.5);
+          case 'monotoneX': return d3.curveMonotoneX;
+          case 'basis': return d3.curveBasis;
+          default: return d3.curveLinear;
+        }
+      };
+
+      function movingAverage(values, windowSize) {
+        if (!Array.isArray(values) || values.length === 0 || windowSize <= 1) return values;
+        const half = Math.floor(windowSize / 2);
+        const out = new Array(values.length);
+        for (let i = 0; i < values.length; i++) {
+          let sum = 0; let count = 0;
+          const start = Math.max(0, i - half);
+          const end = Math.min(values.length - 1, i + half);
+          for (let j = start; j <= end; j++) { if (!Number.isNaN(values[j].value)) { sum += values[j].value; count++; } }
+          const avg = count ? (sum / count) : values[i].value;
+          out[i] = { step: values[i].step, value: avg };
+        }
+        return out;
+      }
+
+      function applySmoothing(values, smooth) {
+        if (!smooth) return values;
+        return movingAverage(values, CONFIG.smoothingWindow);
+      }
+
+      // Smart formatter
+      function createSmartFormatter(values) {
+        if (!values || values.length === 0) return (v) => v;
+
+        const min = d3.min(values);
+        const max = d3.max(values);
+        const range = max - min;
+
+        const allIntegers = values.every(v => Math.abs(v - Math.round(v)) < 0.001);
+
+        if (max >= 1e9) {
+          return (v) => {
+            const billions = v / 1e9;
+            return allIntegers && billions === Math.round(billions)
+              ? d3.format('d')(Math.round(billions)) + 'B'
+              : d3.format('.2f')(billions) + 'B';
+          };
+        }
+
+        if (max >= 1e6) {
+          return (v) => {
+            const millions = v / 1e6;
+            return allIntegers && millions === Math.round(millions)
+              ? d3.format('d')(Math.round(millions)) + 'M'
+              : d3.format('.2f')(millions) + 'M';
+          };
+        }
+
+        if (max >= 1000 && range >= 100) {
+          return (v) => {
+            const thousands = v / 1000;
+            return allIntegers && thousands === Math.round(thousands)
+              ? d3.format('d')(Math.round(thousands)) + 'k'
+              : d3.format('.1f')(thousands) + 'k';
+          };
+        }
+
+        if (allIntegers) {
+          return (v) => d3.format('d')(Math.round(v));
+        }
+
+        if (range < 1) {
+          return (v) => d3.format('.3f')(v);
+        } else if (range < 10) {
+          return (v) => d3.format('.2f')(v);
+        } else {
+          return (v) => d3.format('.1f')(v);
+        }
+      }
+
+      // Colors
+      const getRunColors = (n) => {
+        try { if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') return window.ColorPalettes.getColors('categorical', n); } catch (_) { }
+        const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#E889AB';
+        return [primary, '#4EA5B7', '#E38A42', '#CEC0FA', '#9B59B6', '#16A085', ...(d3.schemeTableau10 || [])].slice(0, n);
+      };
+
+      // Init each chart
+      function initChart(cellElement, chartConfig) {
+        const bodyEl = cellElement.querySelector('.chart-cell__body');
+        const resetBtn = cellElement.querySelector('.reset-button');
+        const legendEl = cellElement.querySelector('.chart-cell__legend');
+        const statEl = cellElement.querySelector('.chart-cell__stat');
+
+        let smoothEnabled = CONFIG.smoothing;
+        let hasMoved = false;
+        let allData = [];
+        let runList = [];
+        let runColorMap = {};
+        let baseline = null;
+        let monotonicity = null;
+
+        // Tooltip
+        let tip = cellElement.querySelector('.d3-tooltip');
+        let tipInner;
+        if (!tip) {
+          tip = document.createElement('div');
+          tip.className = 'd3-tooltip';
+          Object.assign(tip.style, {
+            position: 'absolute', top: '0px', left: '0px', transform: 'translate(-9999px, -9999px)', pointerEvents: 'none',
+            padding: '10px 12px', borderRadius: '12px', fontSize: '12px', lineHeight: '1.35', border: '1px solid var(--border-color)',
+            background: 'var(--surface-bg)', color: 'var(--text-color)', boxShadow: '0 8px 32px rgba(0,0,0,.28), 0 2px 8px rgba(0,0,0,.12)', opacity: '0', transition: 'opacity .12s ease', zIndex: '20'
+          });
+          tipInner = document.createElement('div');
+          tipInner.className = 'd3-tooltip__inner';
+          tip.appendChild(tipInner);
+          cellElement.appendChild(tip);
+        } else {
+          tipInner = tip.querySelector('.d3-tooltip__inner') || tip;
+        }
+
+        // Create SVG
+        const svg = d3.select(bodyEl).append('svg').attr('width', '100%').style('display', 'block');
+
+        // Clip path
+        const clipId = 'clip-' + Math.random().toString(36).slice(2);
+        const clipPath = svg.append('defs').append('clipPath').attr('id', clipId);
+        const clipRect = clipPath.append('rect');
+
+        // Groups
+        const g = svg.append('g');
+        const gGrid = g.append('g').attr('class', 'grid');
+        const gAxes = g.append('g').attr('class', 'axes');
+        const gPlot = g.append('g').attr('class', 'plot').attr('clip-path', `url(#${clipId})`);
+        const gHover = g.append('g').attr('class', 'hover-layer');
+        const overlay = g.append('rect').attr('class', 'overlay').attr('fill', 'none').attr('pointer-events', 'all').style('cursor', 'grab')
+          .on('mousedown', function () {
+            d3.select(this).style('cursor', 'grabbing');
+            tip.style.opacity = '0';
+            if (hoverLine) hoverLine.style('display', 'none');
+          })
+          .on('mouseup', function () { d3.select(this).style('cursor', 'grab'); });
+
+        // Scales
+        const xScale = d3.scaleLinear();
+        const yScale = d3.scaleLinear();
+
+        // Hover state
+        let hoverLine = null;
+        let steps = [];
+        let hideTipTimer = null;
+
+        // Formatters
+        let formatStep = (v) => v;
+        let formatValue = (v) => v;
+
+        // Zoom
+        const zoom = d3.zoom().scaleExtent(CONFIG.zoomExtent).on('zoom', zoomed);
+        overlay.call(zoom);
+
+        function zoomed(event) {
+          const transform = event.transform;
+          hasMoved = transform.k !== 1 || transform.x !== 0 || transform.y !== 0;
+          updateResetButton();
+
+          const newXScale = transform.rescaleX(xScale);
+          const newYScale = transform.rescaleY(yScale);
+
+          const innerWidth = xScale.range()[1];
+
+          // Update grid
+          const gridTicks = newYScale.ticks(5);
+          gGrid.selectAll('line').data(gridTicks).join('line')
+            .attr('x1', 0).attr('x2', innerWidth)
+            .attr('y1', d => newYScale(d)).attr('y2', d => newYScale(d))
+            .attr('stroke', 'var(--grid-color)');
+
+          // Update lines
+          const line = d3.line()
+            .x(d => newXScale(d.step))
+            .y(d => newYScale(d.value))
+            .curve(getCurve(smoothEnabled));
+
+          gPlot.selectAll('path.ghost-line')
+            .attr('d', d => {
+              const rawLine = d3.line().x(d => newXScale(d.step)).y(d => newYScale(d.value)).curve(d3.curveLinear);
+              return rawLine(d.values);
+            });
+
+          gPlot.selectAll('path.main-line')
+            .attr('d', d => line(applySmoothing(d.values, smoothEnabled)));
+
+          // Update axes
+          const newXTicks = newXScale.ticks(5);
+          const newXAxis = d3.axisBottom(newXScale)
+            .tickValues(newXTicks)
+            .tickSizeOuter(0)
+            .tickFormat(formatStep);
+          gAxes.select('.x-axis').call(newXAxis);
+          
+          // Format Y axis to round appropriately based on value magnitude
+          const formatValueRounded = (v) => {
+            if (v === 0) return '0';
+            // Determine rounding precision based on value magnitude
+            if (v < 1) {
+              // For values < 1, round to nearest 0.1
+              return d3.format('.1f')(Math.round(v * 10) / 10);
+            } else if (v < 10) {
+              // For values 1-10, round to nearest 1
+              return d3.format('d')(Math.round(v));
+            } else if (v < 100) {
+              // For values 10-100, round to nearest 10
+              return d3.format('d')(Math.round(v / 10) * 10);
+            } else {
+              // For larger values, round to nearest 10
+              return d3.format('d')(Math.round(v / 10) * 10);
+            }
+          };
+          
+          gAxes.select('.y-axis').call(d3.axisLeft(newYScale).ticks(5).tickSizeOuter(0).tickFormat(formatValueRounded));
+
+          // Update baseline position
+          if (baseline !== null) {
+            gAxes.select('.baseline-line')
+              .attr('y1', newYScale(baseline))
+              .attr('y2', newYScale(baseline));
+            gAxes.select('.baseline-label')
+              .attr('y', newYScale(baseline) - 5);
+          }
+        }
+
+        function updateResetButton() {
+          if (hasMoved) {
+            resetBtn.style.display = 'block';
+            requestAnimationFrame(() => { resetBtn.style.opacity = '1'; });
+          } else {
+            resetBtn.style.opacity = '0';
+            setTimeout(() => { if (!hasMoved) resetBtn.style.display = 'none'; }, 200);
+          }
+        }
+
+        function render() {
+          const rect = bodyEl.getBoundingClientRect();
+          const width = Math.max(1, Math.round(rect.width || 400));
+          const height = CONFIG.chartHeight;
+          svg.attr('width', width).attr('height', height);
+
+          const margin = CONFIG.margin;
+          const innerWidth = width - margin.left - margin.right;
+          const innerHeight = height - margin.top - margin.bottom;
+
+          g.attr('transform', `translate(${margin.left},${margin.top})`);
+
+          if (!allData.length) return;
+
+          // Auto-compute domains
+          const stepExtent = d3.extent(allData, d => d.step);
+          let valueExtent = d3.extent(allData, d => d.value);
+
+          // Include baseline in the domain and add margin
+          if (baseline !== null) {
+            const minValue = Math.min(valueExtent[0], baseline);
+            const maxValue = Math.max(valueExtent[1], baseline);
+            const range = maxValue - minValue;
+            
+            // Add 10% margin below and 10% above to ensure baseline is visible with gap
+            valueExtent = [
+              minValue - range * 0.1,
+              maxValue + range * 0.1
+            ];
+          } else {
+            // Just add 5% margin on both sides
+            const range = valueExtent[1] - valueExtent[0];
+            valueExtent = [
+              valueExtent[0] - range * 0.05,
+              valueExtent[1] + range * 0.05
+            ];
+          }
+
+          xScale.domain(stepExtent).range([0, innerWidth]);
+          yScale.domain(valueExtent).range([innerHeight, 0]);
+
+          // Create smart formatters
+          const stepValues = allData.map(d => d.step);
+          const metricValues = allData.map(d => d.value);
+          
+          // For X axis (tokens already in billions), use a specific formatter
+          const stepMin = d3.min(stepValues);
+          const stepMax = d3.max(stepValues);
+          
+          // Tokens are already in billions, format appropriately
+          formatStep = (v) => {
+            if (v === 0) return '0';
+            // Format with appropriate precision based on value
+            if (v < 0.01) return d3.format('.3f')(v);
+            if (v < 0.1) return d3.format('.2f')(v);
+            if (v < 1) return d3.format('.2f')(v);
+            if (v < 10) return d3.format('.1f')(v);
+            // For larger values, check if integer
+            if (Math.abs(v - Math.round(v)) < 0.01) {
+              return d3.format('d')(Math.round(v));
+            }
+            return d3.format('.1f')(v);
+          };
+          
+          formatValue = createSmartFormatter(metricValues);
+
+          // Update clip
+          clipRect.attr('x', 0).attr('y', 0).attr('width', innerWidth).attr('height', innerHeight);
+
+          // Update overlay
+          overlay.attr('x', 0).attr('y', 0).attr('width', innerWidth).attr('height', innerHeight);
+
+          // Update zoom extent
+          zoom.extent([[0, 0], [innerWidth, innerHeight]])
+            .translateExtent([[0, 0], [innerWidth, innerHeight]]);
+
+          // Grid
+          gGrid.selectAll('line').data(yScale.ticks(5)).join('line')
+            .attr('x1', 0).attr('x2', innerWidth)
+            .attr('y1', d => yScale(d)).attr('y2', d => yScale(d))
+            .attr('stroke', 'var(--grid-color)');
+
+          // Axes
+          gAxes.selectAll('*').remove();
+          
+          // Generate explicit ticks for X axis
+          const xTicks = xScale.ticks(5);
+          const xAxis = d3.axisBottom(xScale)
+            .tickValues(xTicks)
+            .tickSizeOuter(0)
+            .tickFormat(formatStep);
+          
+          gAxes.append('g').attr('class', 'x-axis').attr('transform', `translate(0,${innerHeight})`)
+            .call(xAxis);
+          
+          // Format Y axis to round appropriately based on value magnitude
+          const formatValueRounded = (v) => {
+            if (v === 0) return '0';
+            // Determine rounding precision based on value magnitude
+            if (v < 1) {
+              // For values < 1, round to nearest 0.1
+              return d3.format('.1f')(Math.round(v * 10) / 10);
+            } else if (v < 10) {
+              // For values 1-10, round to nearest 1
+              return d3.format('d')(Math.round(v));
+            } else if (v < 100) {
+              // For values 10-100, round to nearest 10
+              return d3.format('d')(Math.round(v / 10) * 10);
+            } else {
+              // For larger values, round to nearest 10
+              return d3.format('d')(Math.round(v / 10) * 10);
+            }
+          };
+          
+          gAxes.append('g').attr('class', 'y-axis')
+            .call(d3.axisLeft(yScale).ticks(5).tickSizeOuter(0).tickFormat(formatValueRounded));
+          gAxes.selectAll('.domain, .tick line').attr('stroke', 'var(--axis-color)');
+          gAxes.selectAll('text').attr('fill', 'var(--tick-color)');
+
+          // Axis labels
+          gAxes.append('text')
+            .attr('class', 'axis-label')
+            .attr('x', innerWidth / 2)
+            .attr('y', innerHeight + 32)
+            .attr('text-anchor', 'middle')
+            .text(CONFIG.xAxisLabel);
+
+          gAxes.append('text')
+            .attr('class', 'axis-label')
+            .attr('transform', 'rotate(-90)')
+            .attr('x', -innerHeight / 2)
+            .attr('y', -38)
+            .attr('text-anchor', 'middle')
+            .text(CONFIG.yAxisLabel);
+
+          // Baseline reference line
+          if (baseline !== null) {
+            gAxes.append('line')
+              .attr('class', 'baseline-line')
+              .attr('x1', 0)
+              .attr('x2', innerWidth)
+              .attr('y1', yScale(baseline))
+              .attr('y2', yScale(baseline))
+              .attr('stroke', 'var(--text-color, #666)')
+              .attr('stroke-width', 1.5)
+              .attr('stroke-dasharray', '5,5')
+              .attr('opacity', 0.5);
+
+            gAxes.append('text')
+              .attr('class', 'baseline-label')
+              .attr('x', innerWidth - 5)
+              .attr('y', yScale(baseline) - 5)
+              .attr('text-anchor', 'end')
+              .attr('font-size', '10px')
+              .attr('fill', 'var(--text-color, #666)')
+              .attr('opacity', 0.7)
+              .text('Baseline');
+          }
+
+          // Group data by run
+          const dataByRun = {};
+          runList.forEach(run => { dataByRun[run] = []; });
+          allData.forEach(d => {
+            if (dataByRun[d.run]) dataByRun[d.run].push({ step: d.step, value: d.value });
+          });
+          runList.forEach(run => { dataByRun[run].sort((a, b) => a.step - b.step); });
+
+          const series = runList.map(run => ({ run, color: runColorMap[run], values: dataByRun[run] })).filter(s => s.values.length > 0);
+
+          // Ghost lines
+          const ghostLine = d3.line().x(d => xScale(d.step)).y(d => yScale(d.value)).curve(d3.curveLinear);
+          gPlot.selectAll('path.ghost-line').data(series, d => d.run).join('path')
+            .attr('class', 'ghost-line')
+            .attr('fill', 'none')
+            .attr('stroke', d => d.color)
+            .attr('stroke-width', 1.5)
+            .attr('opacity', smoothEnabled ? 0.15 : 0)
+            .attr('pointer-events', 'none')
+            .attr('d', d => ghostLine(d.values));
+
+          // Main lines
+          const mainLine = d3.line().x(d => xScale(d.step)).y(d => yScale(d.value)).curve(getCurve(smoothEnabled));
+          gPlot.selectAll('path.main-line').data(series, d => d.run).join('path')
+            .attr('class', 'main-line')
+            .attr('fill', 'none')
+            .attr('stroke', d => d.color)
+            .attr('stroke-width', 2)
+            .attr('opacity', 0.85)
+            .attr('d', d => mainLine(applySmoothing(d.values, smoothEnabled)));
+
+          // Hover
+          setupHover(series, innerWidth, innerHeight);
+        }
+
+        function setupHover(series, innerWidth, innerHeight) {
+          gHover.selectAll('*').remove();
+
+          hoverLine = gHover.append('line')
+            .style('stroke', 'var(--text-color)')
+            .attr('stroke-opacity', 0.25)
+            .attr('stroke-width', 1)
+            .attr('y1', 0)
+            .attr('y2', innerHeight)
+            .style('display', 'none')
+            .attr('pointer-events', 'none');
+
+          const stepSet = new Set();
+          series.forEach(s => s.values.forEach(v => stepSet.add(v.step)));
+          steps = Array.from(stepSet).sort((a, b) => a - b);
+
+          overlay.on('mousemove', function (ev) {
+            if (ev.buttons === 0) onHoverMove(ev, series);
+          }).on('mouseleave', onHoverLeave);
+        }
+
+        function onHoverMove(ev, series) {
+          if (hideTipTimer) { clearTimeout(hideTipTimer); hideTipTimer = null; }
+
+          const [mx, my] = d3.pointer(ev, overlay.node());
+          const targetStep = xScale.invert(mx);
+          const nearest = steps.reduce((best, t) => Math.abs(t - targetStep) < Math.abs(best - targetStep) ? t : best, steps[0]);
+
+          const xpx = xScale(nearest);
+          hoverLine.attr('x1', xpx).attr('x2', xpx).style('display', null);
+
+          let html = `<div><strong>${chartConfig.title}</strong></div>`;
+          html += `<div>${formatStep(nearest)}</div>`;
+
+          const entries = series.map(s => {
+            const values = s.values;
+            let before = null, after = null;
+            for (let i = 0; i < values.length; i++) {
+              if (values[i].step <= nearest) before = values[i];
+              if (values[i].step >= nearest && !after) { after = values[i]; break; }
+            }
+
+            let interpolatedValue = null;
+            if (before && after && before.step !== after.step) {
+              const t = (nearest - before.step) / (after.step - before.step);
+              interpolatedValue = before.value + t * (after.value - before.value);
+            } else if (before && before.step === nearest) {
+              interpolatedValue = before.value;
+            } else if (after && after.step === nearest) {
+              interpolatedValue = after.value;
+            } else if (before) {
+              interpolatedValue = before.value;
+            } else if (after) {
+              interpolatedValue = after.value;
+            }
+
+            return { run: s.run, color: s.color, value: interpolatedValue };
+          }).filter(e => e.value != null);
+
+          entries.sort((a, b) => b.value - a.value);
+
+          entries.forEach(e => {
+            html += `<div style="display:flex;align-items:center;gap:8px;"><span class="d3-tooltip__color-dot" style="background:${e.color}"></span><span>${e.run}</span><span style="margin-left:auto;font-weight:normal;">${e.value.toFixed(4)}</span></div>`;
+          });
+
+          tipInner.innerHTML = html;
+          const offsetX = 12, offsetY = 12;
+          tip.style.opacity = '1';
+          tip.style.transform = `translate(${Math.round(mx + offsetX + CONFIG.margin.left)}px, ${Math.round(my + offsetY + CONFIG.margin.top)}px)`;
+        }
+
+        function onHoverLeave() {
+          hideTipTimer = setTimeout(() => {
+            tip.style.opacity = '0';
+            tip.style.transform = 'translate(-9999px, -9999px)';
+            if (hoverLine) hoverLine.style('display', 'none');
+          }, 100);
+        }
+
+        // Reset button
+        resetBtn.addEventListener('click', () => {
+          overlay.transition().duration(750).call(zoom.transform, d3.zoomIdentity);
+        });
+
+        // Load data
+        async function load() {
+          try {
+            const langCode = languageMap[chartConfig.language] || chartConfig.language.toLowerCase();
+            const task = chartConfig.task;
+            const baseUrl = window.location.origin + '/evaluation-guidebook_zh';
+            const dataUrl = `${baseUrl}/finetasks/data/${langCode}/${task}_data.csv`;
+            const statsUrl = `${baseUrl}/finetasks/data/${langCode}/${task}_stats.csv`;
+
+            console.log('Loading D3 data from:', dataUrl);
+            console.log('Loading D3 stats from:', statsUrl);
+
+            const [dataResponse, statsResponse] = await Promise.all([
+              fetch(dataUrl, { cache: 'no-cache' }).catch(e => {
+                console.error('Failed to fetch data:', dataUrl, e);
+                throw e;
+              }),
+              fetch(statsUrl, { cache: 'no-cache' }).catch(e => {
+                console.error('Failed to fetch stats:', statsUrl, e);
+                throw e;
+              })
+            ]);
+
+            console.log('Data response status:', dataResponse.status, dataResponse.statusText);
+            console.log('Stats response status:', statsResponse.status, statsResponse.statusText);
+
+            if (!dataResponse.ok) throw new Error(`Failed to load data: ${dataResponse.status} ${dataResponse.statusText}`);
+            if (!statsResponse.ok) throw new Error(`Failed to load stats: ${statsResponse.status} ${statsResponse.statusText}`);
+
+            const csvText = await dataResponse.text();
+            const statsText = await statsResponse.text();
+
+            console.log('CSV text length:', csvText.length);
+            console.log('Stats text length:', statsText.length);
+
+            // Parse CSV
+            const rawRows = d3.csvParse(csvText);
+            const statsRows = d3.csvParse(statsText);
+
+            if (!rawRows || rawRows.length === 0) {
+              throw new Error('No data found in CSV');
+            }
+
+            console.log('Raw CSV columns:', Object.keys(rawRows[0]));
+            console.log('Raw CSV first row:', rawRows[0]);
+            console.log('Looking for metric:', chartConfig.metric);
+            console.log('Total raw rows:', rawRows.length);
+
+            // Extract stat value from stats
+            if (statsRows && statsRows.length > 0) {
+              const statsRow = statsRows.find(row => row.metric === chartConfig.metric);
+              if (statsRow && statsRow[CONFIG.statColumn]) {
+                monotonicity = parseFloat(statsRow[CONFIG.statColumn]);
+                console.log(`${CONFIG.statLabel} value (${CONFIG.statColumn}):`, monotonicity);
+              }
+            }
+
+            // Transform to expected format
+            // Separate baseline from regular runs
+            const dataByRun = {};
+            let baselineValue = null;
+            let skippedRows = 0;
+            
+            rawRows.forEach((row, idx) => {
+              const runname = row.runname || row.run_name || 'unknown';
+              const seed = row.seed || '';
+              const tokens = parseFloat(row.tokens);
+              const metricValue = parseFloat(row[chartConfig.metric]);
+              
+              if (isNaN(tokens) || isNaN(metricValue)) {
+                if (idx < 3) {
+                  console.log(`Skipping row ${idx}: tokens=${row.tokens}, metric=${row[chartConfig.metric]}`);
+                }
+                skippedRows++;
+                return;
+              }
+              
+              // Check if this is a baseline row
+              if (runname.toLowerCase().includes('baseline')) {
+                if (baselineValue === null) {
+                  baselineValue = metricValue;
+                  console.log('Baseline value found:', baselineValue);
+                }
+                return; // Don't include baseline in regular data
+              }
+              
+              const processedName = processRunName(runname);
+              
+              // Create key: either just runname (grouped) or runname_seed (separate)
+              const runKey = CONFIG.groupSeeds ? processedName : `${processedName}_${seed}`;
+              
+              if (!dataByRun[runKey]) {
+                dataByRun[runKey] = {};
+              }
+              
+              const tokenKey = tokens;
+              if (!dataByRun[runKey][tokenKey]) {
+                dataByRun[runKey][tokenKey] = [];
+              }
+              
+              dataByRun[runKey][tokenKey].push(metricValue);
+            });
+
+            console.log('Skipped rows:', skippedRows);
+            console.log('Grouped by runs:', Object.keys(dataByRun));
+
+            // Compute means and create final data
+            allData = [];
+            Object.keys(dataByRun).forEach(runName => {
+              Object.keys(dataByRun[runName]).forEach(tokenKey => {
+                const values = dataByRun[runName][tokenKey];
+                const mean = values.reduce((a, b) => a + b, 0) / values.length;
+                allData.push({
+                  run: runName,
+                  step: parseFloat(tokenKey), // Tokens are already in billions in CSV
+                  value: mean
+                });
+              });
+            });
+
+            console.log('Processed data points:', allData.length);
+            console.log('Unique runs found:', Array.from(new Set(allData.map(d => d.run))));
+            console.log('Sample data points:', allData.slice(0, 5));
+
+            // Validate data
+            if (allData.length === 0) {
+              throw new Error(`No valid data found for metric: ${chartConfig.metric}`);
+            }
+
+            // Store baseline value
+            baseline = baselineValue;
+
+            // Update stat display with the metric value
+            if (statEl && monotonicity !== null && CONFIG.statLabel) {
+              statEl.innerHTML = `
+                <span class="chart-cell__stat-label">${CONFIG.statLabel}:</span>
+                <span class="chart-cell__stat-value">${monotonicity.toFixed(2)}</span>
+              `;
+            }
+
+            runList = Array.from(new Set(allData.map(d => d.run))).sort();
+
+            if (runList.length === 0) {
+              throw new Error('No runs found in data');
+            }
+
+            const colors = getRunColors(runList.length);
+            runList.forEach((run, i) => { runColorMap[run] = colors[i % colors.length]; });
+
+            // Build legend
+            if (legendEl) {
+              legendEl.innerHTML = runList.map(run => {
+                const color = runColorMap[run];
+                return `<span class="item" data-run="${run}"><span class="swatch" style="background:${color}"></span><span>${run}</span></span>`;
+              }).join('');
+
+              // Add hover interactions
+              legendEl.querySelectorAll('.item').forEach(el => {
+                el.addEventListener('mouseenter', () => {
+                  const run = el.getAttribute('data-run');
+                  container.classList.add('hovering');
+                  cellElement.querySelectorAll('path.main-line').forEach(path => {
+                    const pathRun = d3.select(path).datum()?.run;
+                    path.classList.toggle('ghost', pathRun !== run);
+                  });
+                  cellElement.querySelectorAll('path.ghost-line').forEach(path => {
+                    const pathRun = d3.select(path).datum()?.run;
+                    path.classList.toggle('ghost', pathRun !== run);
+                  });
+                  legendEl.querySelectorAll('.item').forEach(it => {
+                    it.classList.toggle('ghost', it.getAttribute('data-run') !== run);
+                  });
+                });
+
+                el.addEventListener('mouseleave', () => {
+                  container.classList.remove('hovering');
+                  cellElement.querySelectorAll('path.main-line').forEach(path => path.classList.remove('ghost'));
+                  cellElement.querySelectorAll('path.ghost-line').forEach(path => path.classList.remove('ghost'));
+                  legendEl.querySelectorAll('.item').forEach(it => it.classList.remove('ghost'));
+                });
+              });
+            }
+
+            render();
+
+          } catch (e) {
+            console.error('Error loading chart:', chartConfig.title, e);
+            const pre = document.createElement('pre');
+            pre.textContent = 'Error loading data: ' + (e && e.message ? e.message : e);
+            pre.style.color = 'var(--danger, #b00020)';
+            pre.style.fontSize = '12px';
+            pre.style.padding = '12px';
+            pre.style.background = 'var(--surface-bg)';
+            pre.style.borderRadius = '6px';
+            pre.style.border = '1px solid var(--danger, #b00020)';
+            bodyEl.appendChild(pre);
+          }
+        }
+
+        // Wrap load in try/catch to prevent one chart from breaking others
+        try {
+          load();
+        } catch (e) {
+          console.error('Failed to initialize chart:', chartConfig.title, e);
+        }
+
+        return { render };
+      }
+
+      // Init all charts
+      const cells = Array.from(grid.querySelectorAll('.chart-cell'));
+      const chartInstances = cells.map((cell, idx) => initChart(cell, CONFIG.charts[idx]));
+
+      // Responsive
+      let resizeTimer;
+      const handleResize = () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+          chartInstances.forEach(chart => chart && chart.render && chart.render());
+        }, 100);
+      };
+
+      const ro = window.ResizeObserver ? new ResizeObserver(handleResize) : null;
+      if (ro) {
+        ro.observe(container);
+      }
+
+      window.addEventListener('resize', handleResize);
+
+      setTimeout(() => {
+        chartInstances.forEach(chart => chart && chart.render && chart.render());
+      }, 100);
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    } else {
+      ensureD3(bootstrap);
+    }
+  })();
+</script>
+

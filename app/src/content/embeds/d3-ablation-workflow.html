@@ -1,0 +1,474 @@
+<div class="d3-ablation-workflow"></div>
+
+<style>
+  .d3-ablation-workflow {
+    font-family: var(--default-font-family);
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: var(--spacing-4) 0;
+    width: 100%;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .d3-ablation-workflow svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .d3-ablation-workflow .stage-box {
+    stroke-width: 2;
+    transition: all 0.3s ease;
+  }
+
+  .d3-ablation-workflow .stage-box:hover {
+    filter: brightness(1.1);
+    stroke-width: 3;
+  }
+
+  .d3-ablation-workflow .stage-label {
+    fill: var(--text-color);
+    font-size: 12px;
+    font-weight: 700;
+    pointer-events: none;
+    user-select: none;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .d3-ablation-workflow .item-label {
+    fill: var(--text-color);
+    font-size: 11px;
+    font-weight: 600;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .d3-ablation-workflow .arrow-line {
+    fill: none;
+    stroke-width: 2;
+    transition: all 0.3s ease;
+  }
+
+  .d3-ablation-workflow .marker {
+    opacity: 0.7;
+  }
+
+  .d3-ablation-workflow .training-curve {
+    fill: none;
+    stroke-width: 2;
+    transition: all 0.3s ease;
+  }
+
+  .d3-ablation-workflow .score-bar {
+    transition: all 0.3s ease;
+  }
+
+  .d3-ablation-workflow .score-bar:hover {
+    filter: brightness(1.15);
+  }
+
+  .d3-ablation-workflow .score-text {
+    fill: var(--text-color);
+    font-size: 10px;
+    font-weight: 600;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .d3-ablation-workflow .axis-label {
+    fill: var(--muted-color);
+    font-size: 9px;
+    font-weight: 500;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .d3-ablation-workflow .legend-text {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-color);
+    text-align: center;
+    margin-top: var(--spacing-3);
+    padding: 0 var(--spacing-4);
+  }
+
+  .d3-ablation-workflow .d3-tooltip {
+    position: absolute;
+    background: var(--surface-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 12px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    max-width: 300px;
+    line-height: 1.35;
+    white-space: pre-line;
+    color: var(--text-color);
+    transform: translate(-9999px, -9999px);
+  }
+
+  @media (max-width: 768px) {
+    .d3-ablation-workflow .stage-label {
+      font-size: 10px;
+    }
+
+    .d3-ablation-workflow .item-label {
+      font-size: 10px;
+    }
+
+    .d3-ablation-workflow .score-text {
+      font-size: 9px;
+    }
+  }
+</style>
+
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => {
+        if (window.d3 && typeof window.d3.select === 'function') cb();
+      };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-ablation-workflow'))) {
+        const candidates = Array.from(document.querySelectorAll('.d3-ablation-workflow'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+
+      if (!container) return;
+
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      container.style.position = container.style.position || 'relative';
+
+      // Get colors from ColorPalettes or fallback
+      const getColors = () => {
+        if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
+          return window.ColorPalettes.getColors('categorical', 3);
+        }
+        return ['#1f77b4', '#ff7f0e', '#2ca02c'];
+      };
+
+      // Data for two ablations: Wikipedia vs Reddit
+      const ablations = [
+        {
+          id: 'wiki',
+          name: 'Wikipedia',
+          color_idx: 0,
+          trainingData: [
+            { step: 0, loss: 4.5 },
+            { step: 1000, loss: 3.2 },
+            { step: 2000, loss: 2.4 },
+            { step: 3000, loss: 1.9 },
+            { step: 4000, loss: 1.5 },
+            { step: 5000, loss: 1.3 }
+          ],
+          finalScore: 72
+        },
+        {
+          id: 'reddit',
+          name: 'Reddit',
+          color_idx: 1,
+          trainingData: [
+            { step: 0, loss: 4.5 },
+            { step: 1000, loss: 3.5 },
+            { step: 2000, loss: 2.8 },
+            { step: 3000, loss: 2.3 },
+            { step: 4000, loss: 2.0 },
+            { step: 5000, loss: 1.8 }
+          ],
+          finalScore: 65
+        }
+      ];
+
+      const svg = d3.select(container).append('svg');
+      const g = svg.append('g');
+
+      // Add legend text below the chart
+      const legendDiv = document.createElement('div');
+      legendDiv.className = 'legend-text';
+      legendDiv.textContent = 'Say you want to compare dataset A and dataset B (for example, Wikipedia vs Reddit) to see how they affect model performance. You train models under the same setups on each, then evaluate and compare the scores on benchmarks.';
+      container.appendChild(legendDiv);
+
+      // Arrow markers
+      const defs = svg.append('defs');
+      getColors().forEach((color, i) => {
+        defs.append('marker')
+          .attr('id', `arrow-ablation-${i}`)
+          .attr('viewBox', '0 -5 10 10')
+          .attr('refX', 9)
+          .attr('refY', 0)
+          .attr('markerWidth', 10)
+          .attr('markerHeight', 10)
+          .attr('orient', 'auto')
+          .append('path')
+          .attr('d', 'M0,-5L10,0L0,5')
+          .attr('fill', color)
+          .attr('fill-opacity', 0.8);
+      });
+
+      // Big arrow marker for the right side
+      defs.append('marker')
+        .attr('id', 'arrow-big')
+        .attr('viewBox', '0 -5 10 10')
+        .attr('refX', 9)
+        .attr('refY', 0)
+        .attr('markerWidth', 10)
+        .attr('markerHeight', 10)
+        .attr('orient', 'auto')
+        .append('path')
+        .attr('d', 'M0,-5L10,0L0,5')
+        .attr('fill', 'var(--primary-color)')
+        .attr('fill-opacity', 0.8);
+
+      let width = 800;
+      let height = 400;
+
+      // Icons as SVG paths
+      const iconPaths = {
+        database: 'M12 2C6.48 2 2 5.02 2 8.5V15.5C2 18.98 6.48 22 12 22C17.52 22 22 18.98 22 15.5V8.5C22 5.02 17.52 2 12 2ZM12 4C16.42 4 20 6.24 20 8.5C20 10.76 16.42 13 12 13C7.58 13 4 10.76 4 8.5C4 6.24 7.58 4 12 4ZM4 11.03C5.89 12.33 8.78 13 12 13C15.22 13 18.11 12.33 20 11.03V15.5C20 17.76 16.42 20 12 20C7.58 20 4 17.76 4 15.5V11.03Z',
+        chart: 'M3 13h2v7H3v-7zm4-6h2v13H7V7zm4-4h2v17h-2V3zm4 8h2v9h-2v-9z'
+      };
+
+      // Function to draw a simple neural network schematic
+      function drawModelSchematic(g, x, y, size, color) {
+        const layers = [3, 4, 3]; // neurons per layer
+        const layerSpacing = size / 3;
+        const neuronRadius = size / 25;
+
+        layers.forEach((neuronsCount, layerIdx) => {
+          const layerX = x + layerIdx * layerSpacing;
+          const neuronSpacing = size / (neuronsCount + 1);
+
+          for (let i = 0; i < neuronsCount; i++) {
+            const neuronY = y + (i + 1) * neuronSpacing;
+
+            // Draw connections to next layer
+            if (layerIdx < layers.length - 1) {
+              const nextLayerX = x + (layerIdx + 1) * layerSpacing;
+              const nextNeuronSpacing = size / (layers[layerIdx + 1] + 1);
+
+              for (let j = 0; j < layers[layerIdx + 1]; j++) {
+                const nextNeuronY = y + (j + 1) * nextNeuronSpacing;
+                g.append('line')
+                  .attr('x1', layerX)
+                  .attr('y1', neuronY)
+                  .attr('x2', nextLayerX)
+                  .attr('y2', nextNeuronY)
+                  .attr('stroke', color)
+                  .attr('stroke-width', 0.5)
+                  .attr('opacity', 0.3);
+              }
+            }
+
+            // Draw neuron
+            g.append('circle')
+              .attr('cx', layerX)
+              .attr('cy', neuronY)
+              .attr('r', neuronRadius)
+              .attr('fill', color)
+              .attr('opacity', 0.8);
+          }
+        });
+      }
+
+      function render() {
+        width = container.clientWidth || 800;
+        height = Math.max(300, Math.round(width * 0.45));
+
+        svg.attr('width', width).attr('height', height);
+
+        const margin = { top: 40, right: 20, bottom: 20, left: 20 };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        g.attr('transform', `translate(${margin.left},${margin.top})`);
+
+        // Clear previous content
+        g.selectAll('*').remove();
+
+        const colors = getColors();
+
+        // Three columns: Data, Training, Scores
+        const colWidth = innerWidth / 3;
+        const col1X = colWidth * 0.5;
+        const col2X = colWidth * 1.5;
+        const col3X = colWidth * 2.5;
+
+        // Stage titles
+        g.selectAll('.stage-label')
+          .data([
+            { x: col1X, label: 'DATA' },
+            { x: col2X, label: 'TRAINING' },
+            { x: col3X, label: 'EVALUATION' }
+          ])
+          .join('text')
+          .attr('class', 'stage-label')
+          .attr('x', d => d.x)
+          .attr('y', -20)
+          .attr('text-anchor', 'middle')
+          .text(d => d.label);
+
+        // Column 1: Data icons
+        const dataY = innerHeight * 0.3;
+        const dataSpacing = innerHeight * 0.35;
+
+        ablations.forEach((abl, i) => {
+          const y = dataY + i * dataSpacing;
+          const iconSize = 30;
+          const boxPadding = 10;
+
+          // Data box
+          const dataGroup = g.append('g')
+            .attr('transform', `translate(${col1X - iconSize / 2 - boxPadding},${y - iconSize / 2 - boxPadding})`);
+
+          dataGroup.append('rect')
+            .attr('class', 'stage-box')
+            .attr('width', iconSize + boxPadding * 2)
+            .attr('height', iconSize + boxPadding * 2)
+            .attr('rx', 8)
+            .attr('fill', colors[abl.color_idx])
+            .attr('fill-opacity', 0.15)
+            .attr('stroke', colors[abl.color_idx]);
+
+          // Database icon
+          dataGroup.append('path')
+            .attr('d', iconPaths.database)
+            .attr('transform', `translate(${boxPadding},${boxPadding}) scale(${iconSize / 24})`)
+            .attr('fill', colors[abl.color_idx]);
+
+          // Label below
+          g.append('text')
+            .attr('class', 'item-label')
+            .attr('x', col1X)
+            .attr('y', y + iconSize + boxPadding + 15)
+            .attr('text-anchor', 'middle')
+            .attr('fill', colors[abl.color_idx])
+            .text(abl.name);
+        });
+
+        // Column 2: Model schematics for training
+        const modelSize = Math.min(80, colWidth * 0.4);
+
+        ablations.forEach((abl, i) => {
+          const y = dataY + i * dataSpacing;
+          const modelX = col2X - modelSize / 2.5;
+          const modelY = y - modelSize / 2;
+
+          // Draw model schematic
+          const modelGroup = g.append('g');
+
+          drawModelSchematic(modelGroup, modelX, modelY, modelSize, colors[abl.color_idx]);
+        });
+
+        // Column 3: Final scores (bar chart)
+        const barWidth = 40;
+        const barMaxHeight = innerHeight * 0.6;
+        const barY = innerHeight * 0.7;
+
+        const scoreScale = d3.scaleLinear()
+          .domain([0, 100])
+          .range([0, barMaxHeight]);
+
+        ablations.forEach((abl, i) => {
+          const x = col3X - (ablations.length * barWidth) / 2 + i * barWidth + barWidth / 2;
+          const barHeight = scoreScale(abl.finalScore);
+
+          // Bar
+          g.append('rect')
+            .attr('class', 'score-bar')
+            .attr('x', x - barWidth / 2 + 5)
+            .attr('y', barY - barHeight)
+            .attr('width', barWidth - 10)
+            .attr('height', barHeight)
+            .attr('rx', 4)
+            .attr('fill', colors[abl.color_idx])
+            .attr('fill-opacity', 0.7);
+
+          // Score text
+          g.append('text')
+            .attr('class', 'score-text')
+            .attr('x', x)
+            .attr('y', barY - barHeight - 5)
+            .attr('text-anchor', 'middle')
+            .attr('fill', colors[abl.color_idx])
+            .text(`${abl.finalScore}%`);
+        });
+
+        // Draw arrows connecting stages
+        const iconSize = 30;
+        const boxPadding = 10;
+
+        // Left side: Individual arrows from data to models (with arrowheads)
+        // Stop the arrows 15px before the model to avoid covering the neural net
+        ablations.forEach((abl, i) => {
+          const y = dataY + i * dataSpacing;
+          const dataEndX = col1X + iconSize / 2 + boxPadding;
+          const modelStartX = col2X - modelSize / 2 - 5; 
+
+          g.append('path')
+            .attr('class', 'arrow-line')
+            .attr('d', `M ${dataEndX} ${y} L ${modelStartX} ${y}`)
+            .attr('stroke', colors[abl.color_idx])
+            .attr('stroke-width', 3)
+            .attr('stroke-opacity', 0.5)
+            .attr('marker-end', `url(#arrow-ablation-${abl.color_idx})`);
+        });
+
+        // Right side: Single big arrow from training column to evaluation column
+        const modelEndX = col2X + modelSize / 2;
+        const evalStartX = col3X - (ablations.length * barWidth) / 2 - 20;
+        const arrowY = (dataY + dataY + (ablations.length - 1) * dataSpacing) / 2; // Middle between all items
+
+        g.append('path')
+          .attr('class', 'arrow-line')
+          .attr('d', `M ${modelEndX} ${arrowY} L ${evalStartX} ${arrowY}`)
+          .attr('stroke', 'var(--primary-color)')
+          .attr('stroke-width', 4)
+          .attr('stroke-opacity', 0.6)
+          .attr('marker-end', 'url(#arrow-big)');
+
+      }
+
+      render();
+
+      // Responsive handling
+      if (window.ResizeObserver) {
+        const ro = new ResizeObserver(() => render());
+        ro.observe(container);
+      } else {
+        window.addEventListener('resize', render);
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    } else {
+      ensureD3(bootstrap);
+    }
+  })();
+</script>

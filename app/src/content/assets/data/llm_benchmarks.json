@@ -1,0 +1,52 @@
+[
+  {
+    "benchmark": "MMLU",
+    "model": "GPT-4o",
+    "score": 88.2
+  },
+  {
+    "benchmark": "MMLU",
+    "model": "Llama 3.1 405B",
+    "score": 85.2
+  },
+  {
+    "benchmark": "GSM8K",
+    "model": "GPT-4o",
+    "score": 94.8
+  },
+  {
+    "benchmark": "GSM8K",
+    "model": "Llama 3.1 405B",
+    "score": 89.0
+  },
+  {
+    "benchmark": "HellaSwag",
+    "model": "GPT-4o",
+    "score": 95.3
+  },
+  {
+    "benchmark": "HellaSwag",
+    "model": "Llama 3.1 405B",
+    "score": 90.6
+  },
+  {
+    "benchmark": "TruthfulQA",
+    "model": "GPT-4o",
+    "score": 64.6
+  },
+  {
+    "benchmark": "TruthfulQA",
+    "model": "Llama 3.1 405B",
+    "score": 61.9
+  },
+  {
+    "benchmark": "ARC-Challenge",
+    "model": "GPT-4o",
+    "score": 79.4
+  },
+  {
+    "benchmark": "ARC-Challenge",
+    "model": "Llama 3.1 405B",
+    "score": 74.8
+  }
+]

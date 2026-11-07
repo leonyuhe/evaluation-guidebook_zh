@@ -1,0 +1,400 @@
+<div class="d3-binary-metrics"></div>
+
+<style>
+  .d3-binary-metrics {
+    font-family: var(--default-font-family);
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: var(--spacing-4) 0;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .d3-binary-metrics .metrics-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-4);
+  }
+
+  .d3-binary-metrics .confusion-matrix {
+    display: grid;
+    grid-template-columns: 100px 1fr 1fr;
+    grid-template-rows: 100px 1fr 1fr;
+    gap: 2px;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
+  .d3-binary-metrics .matrix-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-color);
+  }
+
+  .d3-binary-metrics .matrix-header-row {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .d3-binary-metrics .matrix-header-col {
+    grid-row: 1;
+    grid-column: 1;
+  }
+
+  .d3-binary-metrics .predicted-label {
+    grid-column: 2 / 4;
+    grid-row: 1;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--primary-color);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .d3-binary-metrics .actual-label {
+    grid-column: 1;
+    grid-row: 2 / 4;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--primary-color);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .d3-binary-metrics .matrix-pos-label {
+    grid-column: 2;
+    grid-row: 1;
+    font-size: 12px;
+    padding-bottom: 10px;
+  }
+
+  .d3-binary-metrics .matrix-neg-label {
+    grid-column: 3;
+    grid-row: 1;
+    font-size: 12px;
+    padding-bottom: 10px;
+  }
+
+  .d3-binary-metrics .matrix-pos-label-row {
+    grid-column: 1;
+    grid-row: 2;
+    font-size: 12px;
+    padding-right: 10px;
+  }
+
+  .d3-binary-metrics .matrix-neg-label-row {
+    grid-column: 1;
+    grid-row: 3;
+    font-size: 12px;
+    padding-right: 10px;
+  }
+
+  .d3-binary-metrics .matrix-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-3);
+    border-radius: 8px;
+    min-height: 100px;
+    border: 2px solid;
+    transition: all 0.3s ease;
+  }
+
+  .d3-binary-metrics .matrix-cell:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .d3-binary-metrics .cell-tp {
+    grid-column: 2;
+    grid-row: 2;
+    background: oklch(from var(--primary-color) calc(l + 0.35) calc(c * 0.8) h / 0.3);
+    border-color: oklch(from var(--primary-color) calc(l + 0.1) c h / 0.7);
+  }
+
+  .d3-binary-metrics .cell-fp {
+    grid-column: 3;
+    grid-row: 2;
+    background: oklch(from #ff6b6b calc(l + 0.35) c h / 0.25);
+    border-color: oklch(from #ff6b6b calc(l + 0.1) c h / 0.6);
+  }
+
+  .d3-binary-metrics .cell-fn {
+    grid-column: 2;
+    grid-row: 3;
+    background: oklch(from #ffa500 calc(l + 0.35) c h / 0.25);
+    border-color: oklch(from #ffa500 calc(l + 0.1) c h / 0.6);
+  }
+
+  .d3-binary-metrics .cell-tn {
+    grid-column: 3;
+    grid-row: 3;
+    background: oklch(from var(--primary-color) calc(l + 0.35) calc(c * 0.8) h / 0.3);
+    border-color: oklch(from var(--primary-color) calc(l + 0.1) c h / 0.7);
+  }
+
+  [data-theme="dark"] .d3-binary-metrics .cell-tp,
+  [data-theme="dark"] .d3-binary-metrics .cell-tn {
+    background: oklch(from var(--primary-color) calc(l + 0.25) calc(c * 0.8) h / 0.25);
+    border-color: oklch(from var(--primary-color) calc(l + 0.05) c h / 0.75);
+  }
+
+  [data-theme="dark"] .d3-binary-metrics .cell-fp {
+    background: oklch(from #ff6b6b calc(l + 0.25) c h / 0.2);
+    border-color: oklch(from #ff6b6b calc(l + 0.05) c h / 0.65);
+  }
+
+  [data-theme="dark"] .d3-binary-metrics .cell-fn {
+    background: oklch(from #ffa500 calc(l + 0.25) c h / 0.2);
+    border-color: oklch(from #ffa500 calc(l + 0.05) c h / 0.65);
+  }
+
+  .d3-binary-metrics .cell-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-color);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--spacing-1);
+  }
+
+  .d3-binary-metrics .cell-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+
+  .d3-binary-metrics .cell-description {
+    font-size: 10px;
+    color: var(--muted-color);
+    text-align: center;
+    margin-top: var(--spacing-1);
+  }
+
+  .d3-binary-metrics .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-3);
+    margin-top: var(--spacing-4);
+  }
+
+  .d3-binary-metrics .metric-card {
+    background: oklch(from var(--primary-color) calc(l + 0.42) c h / 0.25);
+    border: 1px solid oklch(from var(--primary-color) calc(l + 0.2) c h / 0.5);
+    border-radius: 12px;
+    padding: var(--spacing-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+  }
+
+  [data-theme="dark"] .d3-binary-metrics .metric-card {
+    background: oklch(from var(--primary-color) calc(l + 0.32) c h / 0.2);
+    border-color: oklch(from var(--primary-color) calc(l + 0.15) c h / 0.55);
+  }
+
+  .d3-binary-metrics .metric-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--primary-color);
+  }
+
+  [data-theme="dark"] .d3-binary-metrics .metric-name {
+    color: oklch(from var(--primary-color) calc(l + 0.05) calc(c * 1.1) h);
+  }
+
+  .d3-binary-metrics .metric-formula {
+    font-size: 13px;
+    color: var(--text-color);
+    font-family: monospace;
+    background: var(--surface-bg);
+    padding: var(--spacing-2);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+  }
+
+  .d3-binary-metrics .metric-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--primary-color);
+    text-align: center;
+  }
+
+  .d3-binary-metrics .metric-interpretation {
+    font-size: 12px;
+    color: var(--muted-color);
+    line-height: 1.4;
+  }
+
+  .d3-binary-metrics .example-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--primary-color);
+    text-align: center;
+    margin-bottom: var(--spacing-3);
+  }
+
+  .d3-binary-metrics .example-description {
+    font-size: 13px;
+    color: var(--text-color);
+    text-align: center;
+    font-style: italic;
+    margin-bottom: var(--spacing-4);
+  }
+
+  @media (max-width: 768px) {
+    .d3-binary-metrics .confusion-matrix {
+      max-width: 100%;
+      grid-template-columns: 80px 1fr 1fr;
+      grid-template-rows: 80px 1fr 1fr;
+    }
+
+    .d3-binary-metrics .matrix-cell {
+      min-height: 80px;
+      padding: var(--spacing-2);
+    }
+
+    .d3-binary-metrics .cell-value {
+      font-size: 24px;
+    }
+
+    .d3-binary-metrics .metrics-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  (() => {
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-binary-metrics'))) {
+        const candidates = Array.from(document.querySelectorAll('.d3-binary-metrics'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+
+      if (!container) return;
+
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Example: Question answering - checking if answer is correct
+      const TP = 45;  // Correctly identified as correct answer
+      const FP = 8;   // Incorrect answer marked as correct
+      const FN = 5;   // Correct answer marked as incorrect
+      const TN = 42;  // Correctly identified as incorrect answer
+
+      // Calculate metrics
+      const precision = TP / (TP + FP);
+      const recall = TP / (TP + FN);
+      const f1 = 2 * (precision * recall) / (precision + recall);
+
+      // MCC calculation
+      const numerator = (TP * TN) - (FP * FN);
+      const denominator = Math.sqrt((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN));
+      const mcc = numerator / denominator;
+
+      container.innerHTML = `
+        <div class="metrics-container">
+          <div class="example-title">Binary Classification Metrics Example</div>
+          <div class="example-description">
+            Question Answering: 100 model predictions evaluated (50 correct, 50 incorrect)
+          </div>
+
+          <div class="confusion-matrix">
+            <div class="matrix-label predicted-label">Predicted</div>
+            <div class="matrix-label actual-label">Actual</div>
+
+            <div class="matrix-label matrix-pos-label">Correct</div>
+            <div class="matrix-label matrix-neg-label">Incorrect</div>
+            <div class="matrix-label matrix-pos-label-row">Correct</div>
+            <div class="matrix-label matrix-neg-label-row">Incorrect</div>
+
+            <div class="matrix-cell cell-tp">
+              <div class="cell-label">True Positive</div>
+              <div class="cell-value">${TP}</div>
+              <div class="cell-description">Correct answer identified as correct</div>
+            </div>
+
+            <div class="matrix-cell cell-fp">
+              <div class="cell-label">False Positive</div>
+              <div class="cell-value">${FP}</div>
+              <div class="cell-description">Incorrect answer marked as correct</div>
+            </div>
+
+            <div class="matrix-cell cell-fn">
+              <div class="cell-label">False Negative</div>
+              <div class="cell-value">${FN}</div>
+              <div class="cell-description">Correct answer marked as incorrect</div>
+            </div>
+
+            <div class="matrix-cell cell-tn">
+              <div class="cell-label">True Negative</div>
+              <div class="cell-value">${TN}</div>
+              <div class="cell-description">Incorrect answer identified as incorrect</div>
+            </div>
+          </div>
+
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-name">Precision</div>
+              <div class="metric-formula">TP / (TP + FP)</div>
+              <div class="metric-value">${precision.toFixed(3)}</div>
+              <div class="metric-interpretation">
+                ${(precision * 100).toFixed(1)}% of answers marked correct are actually correct.
+                Critical when false positives (wrong answers accepted) are costly.
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-name">Recall</div>
+              <div class="metric-formula">TP / (TP + FN)</div>
+              <div class="metric-value">${recall.toFixed(3)}</div>
+              <div class="metric-interpretation">
+                ${(recall * 100).toFixed(1)}% of actually correct answers were identified.
+                Critical when missing positives (rejecting correct answers) is costly.
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-name">F1 Score</div>
+              <div class="metric-formula">2 × (P × R) / (P + R)</div>
+              <div class="metric-value">${f1.toFixed(3)}</div>
+              <div class="metric-interpretation">
+                Harmonic mean of precision and recall.
+                Balances both metrics, good for imbalanced data.
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-name">MCC</div>
+              <div class="metric-formula">(TP×TN - FP×FN) / √((TP+FP)(TP+FN)(TN+FP)(TN+FN))</div>
+              <div class="metric-value">${mcc.toFixed(3)}</div>
+              <div class="metric-interpretation">
+                Matthews Correlation Coefficient ranges from -1 to +1.
+                Works well with imbalanced datasets.
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
+    } else {
+      bootstrap();
+    }
+  })();
+</script>

@@ -1,0 +1,185 @@
+---
+title: "LLM 评测指南"
+subtitle: "基于三年间为 15,000 个模型打分的经验，关于 LLM 评测你想知道的一切"
+description: "理解 2025 年评测 LLM 的技巧与陷阱"
+citationTitle: "The LLM Evaluation Guidebook"
+authors:
+  - name: "Clémentine Fourrier"
+    url: "https://huggingface.co/clefourrier"
+    affiliations: [1]
+  - name: "Thibaud Frere"
+    url: "https://huggingface.co/tfrere"
+    affiliations: [1]
+  - name: "Guilherme Penedo"
+    url: "https://huggingface.co/guipenedo"
+    affiliations: [1]
+  - name: "Thomas Wolf"
+    url: "https://huggingface.co/thomwolf"
+    affiliations: [1]
+affiliations:
+  - name: "Hugging Face"
+    url: "https://huggingface.co"
+published: "2025 年 12 月 3 日"
+tags:
+  - research
+  - evaluation
+tableOfContentsAutoCollapse: true
+showPdf: false
+licence: '本译文基于 Hugging Face 的 <a href="https://huggingface.co/spaces/OpenEvals/evaluation-guidebook" target="_blank" rel="noopener">The LLM Evaluation Guidebook</a> 翻译，原作者 Clémentine Fourrier、Thibaud Frere、Guilherme Penedo、Thomas Wolf，原文采用 CC BY 4.0 许可。译文由 <a href="https://github.com/leonyuhe" target="_blank" rel="noopener">leonyuhe</a> 维护，非 Hugging Face 官方中文版。'
+---
+
+import Note from "../components/Note.astro";
+import Sidenote from "../components/Sidenote.astro";
+import HtmlEmbed from "../components/HtmlEmbed.astro";
+
+import Intro from "./chapters/intro.mdx";
+import DesigningAutomaticEvaluation from "./chapters/automated-benchmarks/designing-your-automatic-evaluation.mdx";
+import PickingYourEval from "./chapters/general-knowledge/picking-your-evaluation.mdx";
+import EvalsIn2025 from "./chapters/general-knowledge/2025-evaluations-for-useful-models.mdx"
+import TroubleshootingReproducibility from "./chapters/troubleshooting/troubleshooting-reproducibility.mdx";
+import ModelInferenceAndEvaluation from "./chapters/general-knowledge/model-inference-and-evaluation.mdx";
+
+
+
+<Intro />
+
+<a id="llm-basics-to-understand-evaluation"></a>
+
+## 理解评测所需的 LLM 基础知识
+
+现在你已经了解为什么评测对不同的人都很重要，接下来看看我们如何通过提示模型得到一些答案，以便对它们进行评测。如果你已经做过评测，可以略读这一节，主要留意注释和旁注。
+
+
+<ModelInferenceAndEvaluation />
+
+<a id="evaluating-with-existing-benchmarks"></a>
+
+## 用现有基准进行评测
+
+现在你已经（重新）熟悉了分词与推理如何运作的必要基础知识，也了解了做评测时有哪些注意事项，让我们来看看实际的基准评测！我们会先简要浏览 2025 年的各类评测，然后讨论在看一个基准时该关注什么，以及为什么你很可能无法复现公布出来的分数。最后，我们会和 FineWeb 团队一起讨论一个特殊情况：如何挑选好的基准来评测训练。
+
+<Note title="重要概念"  emoji="⚠️" variant="info">
+在这一节中，你会经常看到两个概念：数据污染和饱和。
+
+**饱和**是指模型在某个基准上的表现超过了人类表现。更一般地说，这个词用于那些不再被认为有用的数据集，因为它们已经失去了区分不同模型的能力。
+<Sidenote> 这正是你在横幅图片中看到的现象！ </Sidenote>
+
+*如果你的评测中所有模型都接近可能的最高分，那它就不再是一个有区分度的基准了。这类似于用幼儿园的题目考高中生：成功说明不了什么（尽管失败很有指示性）。*
+
+**数据污染**是指评测数据集最终进入了模型的训练数据集，在这种情况下，模型的表现被人为抬高，并不能反映其在任务上的真实世界表现。
+
+*这有点像用学生已经提前知道答案的问题来考学生。*
+
+</Note>
+
+<a id="benchmarks-to-know-in-2025"></a>
+
+### 2025 年需要了解的基准
+
+<EvalsIn2025 />
+
+
+<a id="understanding-whats-in-there"></a>
+
+### 弄清里面都有什么
+
+无论你如何挑选初始数据集，最重要的一步始终是查看数据——既包括你手头的数据，也包括模型生成的内容及其得分。归根结底，只有这样才能看出你的评测是否真的与你的具体用例相关。
+
+你需要研究以下几点。
+
+<a id="data-creation-process"></a>
+
+#### 数据创建过程
+- **实际的样本是谁创建的？**
+理想情况下，你希望数据集由专家创建，其次是付费标注者，然后是众包，再然后是合成数据，最后是 MTurk 众包。你还要找一找数据卡，在那里你能看到标注者的人口统计信息——这对于理解数据集的语言多样性或潜在的文化偏见可能很重要。
+
+- **它们是否都由其他标注者或作者检查过？**
+你想知道样本上的标注者间一致性分数是否很高（= 标注者之间是否一致？），以及完整数据集是否被作者检查过。
+对于借助低报酬标注者（这些人通常不是目标语言的母语者，想想 AWS Mechanical Turk）构建的数据集，这一点尤其重要，否则你可能会发现拼写错误、语法错误或毫无意义的答案。
+
+- **是否为标注者提供了清晰的数据创建指南？**
+换句话说，你的数据集是否一致？
+
+<a id="samples-inspection"></a>
+
+#### 样本检查
+随机抽取 50 个样本并手动检查；我的意思是你亲自去做，而不是“提示一个 LLM 帮你找出数据中不寻常的内容”。
+
+首先，你要检查内容质量。
+- 提示词是否清晰无歧义？
+- 答案是否正确？（*例如：TriviaQA 每道题包含多个标准答案（aliases 字段），有时彼此冲突。*）
+- 是否缺少信息？（*例如：MMLU 中有若干题目引用了并不存在的图表。*）
+
+要记住，一个数据集是标准，并不意味着它就是好的——而这种情况之所以发生，是因为大多数人都跳过了这一步。
+
+然后，你要检查它与你的任务的相关性。这些问题是你想要用来评测 LLM 的那类问题吗？这些例子与你的用例相关吗？
+
+你可能还想检查样本的一致性（尤其是如果你打算使用少样本提示或计算聚合统计量）：如果是多项选择评测，所有样本的选项数量是否相同？提示词前后的空格是否一致？如果你的评测附带额外的环境，理想情况下你应该用它来理解实际调用的是什么。
+
+最后，你还要快速检查里面有多少个样本（以确保结果具有统计显著性——对于自动基准，100 个样本通常是下限）。
+
+例如，在下面的查看器中，你可以检查 Lewis 收集的知名后训练基准的前几个样本。
+
+<iframe
+  src="https://huggingface.co/datasets/HuggingFaceTB/post-training-benchmarks-viewer/embed/viewer/aime25/test"
+  frameborder="0"
+  width="100%"
+  height="560px"
+></iframe>
+
+<a id="task-and-metrics"></a>
+
+#### 任务与指标
+
+你要检查使用了哪些指标：是自动指标、函数式指标，还是使用模型裁判？答案会改变你运行评测的成本，也会影响可复现性和偏见类型。最好（但也最罕见）的指标是函数式指标，或基于规则验证器的指标 <Sidenote> 做代码评测时，当心过于简单的通过/失败单元测试！近期的 LLM 已经非常擅长覆盖全局变量来“作弊”，尤其是在 Python 这类可以扰乱变量作用域的语言中。</Sidenote>
+
+<a id="so-you-cant-reproduce-reported-model-scores"></a>
+
+### 所以，你无法复现公布的模型分数？
+
+<TroubleshootingReproducibility />
+
+<a id="selecting-good-benchmarks-automatically-for-model-training"></a>
+
+### 为模型训练自动挑选好的基准
+
+<PickingYourEval />
+
+
+
+<a id="creating-your-own-evaluation"></a>
+
+## 创建你自己的评测
+
+到了这一步，你大概已经清楚人们为什么要做评测、有哪些基准、以及哪些基准与模型的不同阶段相关（训练、基座模型和微调模型的推理），但如果你特定的用例没有任何现成的东西呢？
+
+这正是你可能想要创建自己的评测的时候。
+
+<DesigningAutomaticEvaluation />
+
+<a id="conclusion"></a>
+
+## 结论
+
+评测既是一门艺术，也是一门科学。我们探讨了 2025 年 LLM 评测的全景——从理解我们为什么要评测模型，以及分词和推理的基本机制，到在不断演化的基准生态中穿行，最后到为你自己的用例创建评测。
+
+我希望你能记住的几个要点是：
+
+**批判性地思考你在测量什么。** 评测是能力的代理指标，因此基准上的高分并不能保证真实世界中的表现。不同的评测方法（自动指标、人类裁判或模型裁判）各有其偏见、局限和取舍。
+
+**让评测与你的目标匹配。** 你在训练期间做消融实验吗？那就使用快速、可靠、即使在小模型上也有强信号的基准。要比较最终模型以做选择？那就聚焦于更难、未被污染、能考察整体能力的数据集。要为特定用例构建？那就创建能反映你的问题和数据的自定义评测。
+
+**可复现性需要关注细节。** 提示词、分词、归一化、模板或随机种子的微小差异都可能让分数波动几个点。报告结果时，要对你采用的方法保持透明。尝试复现结果时，要预料到即使你试图控制每一个变量，精确复现也会极其困难。
+
+**优先选择可解释的评测方法。** 在可能的情况下，应选择函数式测试和基于规则的验证器，而不是模型裁判。能够被理解和调试的评测会提供更清晰、更可操作的洞见……而且你的评测越可解释，你就越能改进你的模型！
+
+**评测永远不会结束。** 随着模型改进，基准会饱和。随着训练数据增长，数据污染更可能发生。随着用例演化，新的能力需要被测量。评测是一场持续的战斗！
+
+最后：我们构建的模型有多好，取决于我们测量关键事物的能力。感谢阅读！
+
+
+<a id="acknowledgments"></a>
+
+### 致谢
+
+感谢所有直接或间接为本文档做出贡献的人，尤其是 Hynek Kydlicek、Loubna Ben Allal、Sander Land 和 Nathan Habib。

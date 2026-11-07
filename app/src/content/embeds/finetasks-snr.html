@@ -1,0 +1,521 @@
+<div class="finetasks-plot-container" style="display: flex; gap: 20px; flex-wrap: wrap;">
+    <div class="task-signal-plot" data-language="Telugu" data-task="xstory_cloze_tel_cf" data-show-controls="false" data-task-metrics="snr" data-metric="acc_norm_token" data-group-seeds="false" data-title="✅ Good SNR: xstory_cloze_tel_cf [te]" style="flex: 1; min-width: 300px;"></div>
+    <div class="task-signal-plot" data-language="Telugu" data-task="tydiqa_tel" data-show-controls="false" data-task-metrics="snr" data-metric="prefix_match" data-group-seeds="false" data-title="❌ Bad SNR: tydiqa_tel [te]" style="flex: 1; min-width: 300px;"></div>
+</div>
+
+<style>
+  .finetasks-plot-container {
+    width: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  }
+
+  .task-signal-plot {
+    position: relative;
+    background: var(--surface-bg, #fff);
+    border-radius: 8px;
+    padding: 16px;
+    box-sizing: border-box;
+  }
+
+  .task-signal-plot .plot-container {
+    width: 100%;
+    min-height: 300px;
+  }
+
+  .task-signal-plot .stats-container {
+    margin-top: 12px;
+    padding: 12px;
+    background: var(--page-bg, #f9fafb);
+    border-radius: 6px;
+    font-size: 13px;
+  }
+
+  .task-signal-plot .compact-stats,
+  .task-signal-plot .compact-stats-single {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    color: var(--text-color, #1f2937);
+  }
+
+  .task-signal-plot .compact-stats span,
+  .task-signal-plot .compact-stats-single span {
+    font-weight: 500;
+  }
+
+  .task-signal-plot .controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .task-signal-plot .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .task-signal-plot .control-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-color, #1f2937);
+  }
+
+  .task-signal-plot select {
+    padding: 6px 10px;
+    border: 1px solid var(--border-color, #d1d5db);
+    border-radius: 4px;
+    background: var(--surface-bg, #fff);
+    color: var(--text-color, #1f2937);
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .task-signal-plot select:focus {
+    outline: none;
+    border-color: var(--primary-color, #3b82f6);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+</style>
+
+<script type="module">
+  (() => {
+    // Language and task configuration
+    const languageMap = {
+      'Arabic': 'ar',
+      'Turkish': 'tr',
+      'Swahili': 'sw',
+      'Russian': 'ru',
+      'Telugu': 'te',
+      'Thai': 'th',
+      'Chinese': 'zh',
+      'French': 'fr',
+      'Hindi': 'hi'
+    };
+
+    const runNameMap = {
+      "orion": "Dataset-A",
+      "helios": "Dataset-B",
+      "lynx": "Dataset-C",
+      "aquila": "Dataset-D",
+      "commoncrawl": "CommonCrawl",
+      "baseline": "Baseline"
+    };
+
+    const LINE_SETTINGS = {
+      width: 2.5,
+      type: "scatter",
+      mode: "lines+markers",
+    };
+
+    const DEFAULT_LAYOUT = {
+      font: {
+        family: "apple-system, Arial, sans-serif",
+      },
+      title: {
+        font: {
+          size: 15,
+        },
+      },
+      xaxis: {
+        title: {
+          text: "Training Tokens (billions)",
+          font: {
+            size: 14,
+          },
+        },
+        tickfont: {
+          size: 12,
+        },
+        showgrid: false,
+        mirror: true,
+        ticks: "outside",
+        showline: true,
+      },
+      yaxis: {
+        title: {
+          font: {
+            size: 14,
+          },
+          standoff: 10,
+        },
+        showgrid: false,
+        mirror: true,
+        ticks: "outside",
+        showline: true,
+        tickfont: {
+          size: 12,
+        },
+      },
+      height: 300,
+      autosize: true,
+      legend: {
+        orientation: 'h',
+        yanchor: 'bottom',
+        y: 0,
+        xanchor: 'right',
+        x: 1,
+        traceorder: 'normal',
+        font: { size: 12 },
+        tracegroupgap: 0,
+        bgcolor: 'rgba(255, 255, 255, 0.8)'
+      },
+      margin: {
+        t: 25,
+        b: 60,
+        l: 60,
+        r: 40,
+      },
+    };
+
+    // Load dependencies
+    const loadScript = (src, globalCheck) => {
+      return new Promise((resolve, reject) => {
+        // Check if already loaded
+        if (globalCheck && window[globalCheck]) {
+          resolve();
+          return;
+        }
+
+        const existing = document.querySelector(`script[src="${src}"]`);
+        if (existing) {
+          // Script tag exists, wait for it to load
+          if (globalCheck && window[globalCheck]) {
+            resolve();
+            return;
+          }
+          existing.addEventListener('load', resolve);
+          existing.addEventListener('error', reject);
+          return;
+        }
+
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = () => {
+          // Wait a bit for the global variable to be available
+          setTimeout(() => {
+            if (globalCheck && !window[globalCheck]) {
+              reject(new Error(`${globalCheck} not available after loading ${src}`));
+            } else {
+              resolve();
+            }
+          }, 50);
+        };
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    };
+
+    const loadDependencies = async () => {
+      await loadScript('https://cdn.plot.ly/plotly-2.27.0.min.js', 'Plotly');
+      await loadScript('https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js', '_');
+    };
+
+    // CSV parser with proper handling of quoted fields
+    const parseCSV = (text) => {
+      const lines = text.trim().split('\n');
+      if (lines.length === 0) return [];
+
+      const headers = lines[0].split(',').map(h => h.trim());
+      const data = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line.trim()) continue;
+
+        const values = [];
+        let current = '';
+        let inQuotes = false;
+
+        for (let j = 0; j < line.length; j++) {
+          const char = line[j];
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            values.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        values.push(current.trim());
+
+        const row = {};
+        headers.forEach((header, index) => {
+          const value = values[index] || '';
+          // Keep runname as string, convert other numeric columns
+          if (header === 'runname') {
+            row[header] = value;
+          } else {
+            const numValue = parseFloat(value);
+            row[header] = isNaN(numValue) ? value : numValue;
+          }
+        });
+        data.push(row);
+      }
+
+      return data;
+    };
+
+    // Utility functions
+    const getColor = (index) => {
+      const colors = [
+        '#4e79a7', '#f28e2c', '#e15759', '#76b7b2', '#59a14f',
+        '#edc949', '#af7aa1', '#ff9da7', '#9c755f', '#bab0ab'
+      ];
+      return colors[index % colors.length];
+    };
+
+    const processRunName = (runname) => {
+      if (!runname || typeof runname !== 'string') {
+        return String(runname || 'unknown');
+      }
+      for (const [key, value] of Object.entries(runNameMap)) {
+        if (runname.includes(key)) {
+          return value;
+        }
+      }
+      return runname;
+    };
+
+    const sortDataByTokens = (data) => {
+      return window._.sortBy(data, 'tokens');
+    };
+
+    const groupDataByRunname = (data, groupSeeds, metric) => {
+      data = data.filter(row => row.runname != null && row.runname !== 'null_undefined');
+
+      if (!groupSeeds) {
+        return window._.groupBy(data, row => `${processRunName(row.runname)}_${row.seed}`);
+      }
+
+      const grouped = window._.groupBy(data, row => processRunName(row.runname));
+
+      return window._.mapValues(grouped, (rows) => {
+        const stepGroups = window._.groupBy(rows, 'tokens');
+        return window._.map(stepGroups, (stepRows) => {
+          const meanMetric = window._.meanBy(stepRows, row => parseFloat(row[metric]) || 0);
+          return {
+            ...stepRows[0],
+            [metric]: meanMetric
+          };
+        });
+      });
+    };
+
+    const interpolateData = (data, metric) => {
+      return window._.mapValues(data, (rows) => {
+        const sortedRows = window._.sortBy(rows, 'tokens');
+        const allTokens = window._.uniq(window._.flatMap(Object.values(data), rows => rows.map(r => r.tokens))).sort((a, b) => a - b);
+
+        return allTokens.map(token => {
+          const exactMatch = window._.find(sortedRows, { tokens: token });
+          if (exactMatch) return exactMatch;
+
+          const lowerRow = window._.findLast(sortedRows, r => r.tokens < token);
+          const upperRow = window._.find(sortedRows, r => r.tokens > token);
+
+          if (!lowerRow) return { ...upperRow, tokens: token };
+          if (!upperRow) return { ...lowerRow, tokens: token };
+
+          const ratio = (token - lowerRow.tokens) / (upperRow.tokens - lowerRow.tokens);
+          const interpolatedMetric = lowerRow[metric] + (upperRow[metric] - lowerRow[metric]) * ratio;
+
+          return {
+            ...lowerRow,
+            tokens: token,
+            [metric]: interpolatedMetric
+          };
+        });
+      });
+    };
+
+    const smoothData = (data, metric, windowSize = 3) => {
+      return window._.mapValues(data, (rows) => {
+        return rows.map((row, index, array) => {
+          const windowSlice = array.slice(Math.max(0, index - windowSize + 1), index + 1);
+          const smoothedMetric = window._.meanBy(windowSlice, r => r[metric]);
+          return { ...row, [metric]: smoothedMetric };
+        });
+      });
+    };
+
+    const createTraces = (groupedData, metric) => {
+      const colorsMapping = new Map();
+      const sortedRunnames = Object.keys(groupedData).sort((a, b) => {
+        if (a.includes('baseline')) return 1;
+        if (b.includes('baseline')) return -1;
+        return a.localeCompare(b);
+      });
+
+      return sortedRunnames.map((runname, index) => {
+        const color = colorsMapping.get(runname) || getColor(index);
+        colorsMapping.set(runname, color);
+
+        return {
+          x: groupedData[runname].map(row => row.tokens),
+          y: groupedData[runname].map(row => row[metric]),
+          name: runname,
+          line: {
+            color: color,
+            shape: 'spline',
+            ...LINE_SETTINGS
+          },
+          marker: {
+            color: color,
+            size: 6,
+          },
+          mode: 'lines+markers',
+        };
+      });
+    };
+
+    const displayStatistics = (container, stats, metric, taskMetrics) => {
+      const statsContainer = container.querySelector('.stats-container');
+      const metricStats = stats.find(stat => stat.metric === metric);
+      if (metricStats) {
+        statsContainer.innerHTML = `
+          <div class="compact-stats${taskMetrics.length === 1 ? '-single' : ''}">
+            ${taskMetrics.includes('monotonicity') ? '<span title="Average Spearman Correlation">Monotonicity: ' + metricStats.avg_spearman.toFixed(2) + '</span>' : ''}
+            ${taskMetrics.includes('snr') ? '<span title="Average Signal-to-Noise Ratio">Signal-to-Noise: ' + metricStats.avg_snr.toFixed(2) + '</span>' : ''}
+            ${taskMetrics.includes('ordering') ? '<span title="Average Kendall Tau-a">Ordering Consistency: ' + metricStats.avg_kendall_tau_a.toFixed(2) + '</span>' : ''}
+            ${taskMetrics.includes('randomness') ? '<span title="Max N Standard Deviations">Non-Randomness: ' + metricStats.max_n_std.toFixed(2) + '</span>' : ''}
+          </div>
+        `;
+      } else {
+        statsContainer.innerHTML = '<p>No statistics available for this metric.</p>';
+      }
+    };
+
+    const plotData = (container, data, stats, metric, title, taskMetrics) => {
+      const groupSeeds = container.dataset.groupSeeds === 'true';
+      const sortedData = sortDataByTokens(data);
+      const groupedData = groupDataByRunname(sortedData, groupSeeds, metric);
+      const interpolatedData = interpolateData(groupedData, metric);
+      const smoothedData = smoothData(interpolatedData, metric);
+      const traces = createTraces(smoothedData, metric);
+
+      const plotContainer = container.querySelector('.plot-container');
+
+      const layout = window._.merge({}, DEFAULT_LAYOUT, {
+        title: { text: `${title}` },
+        xaxis: {
+          title: { text: 'Training Tokens (billions)' },
+          tickvals: [0, 5, 10, 15, 20, 25],
+          ticktext: ['0', '5B', '10B', '15B', '20B', '25B'],
+          tickangle: 45,
+          range: [0, 30],
+        },
+        yaxis: {
+          title: { text: 'Score' },
+          range: [Math.min(...traces.flatMap(trace => trace.y)) * 0.95, Math.max(...traces.flatMap(trace => trace.y)) * 1.05],
+        },
+        width: container.offsetWidth,
+      });
+
+      window.Plotly.newPlot(plotContainer, traces, layout, {responsive: true});
+
+      displayStatistics(container, stats, metric, taskMetrics);
+    };
+
+    const updatePlot = async (container, taskMetrics) => {
+      const language = container.dataset.language;
+      const task = container.dataset.task;
+      const metric = container.dataset.metric;
+      const title = container.dataset.title;
+      const langCode = languageMap[language];
+
+      if (!langCode || !task || !metric) {
+        return;
+      }
+
+      const baseUrl = window.location.origin + '/evaluation-guidebook_zh';
+      const dataUrl = `${baseUrl}/finetasks/data/${langCode}/${task}_data.csv`;
+      const statsUrl = `${baseUrl}/finetasks/data/${langCode}/${task}_stats.csv`;
+
+      try {
+        console.log('Loading data from:', dataUrl);
+        console.log('Loading stats from:', statsUrl);
+
+        const [dataResponse, statsResponse] = await Promise.all([
+          fetch(dataUrl).then(r => {
+            if (!r.ok) throw new Error(`Failed to load data: ${r.statusText}`);
+            return r.text();
+          }),
+          fetch(statsUrl).then(r => {
+            if (!r.ok) throw new Error(`Failed to load stats: ${r.statusText}`);
+            return r.text();
+          })
+        ]);
+
+        const taskData = parseCSV(dataResponse);
+        const statsData = parseCSV(statsResponse);
+
+        console.log('Data loaded:', taskData.length, 'rows');
+        console.log('Stats loaded:', statsData.length, 'rows');
+        console.log('Plotting data...');
+
+        plotData(container, taskData, statsData, metric, title, taskMetrics);
+      } catch (error) {
+        console.error('Error in updatePlot:', error);
+        const plotContainer = container.querySelector('.plot-container');
+        if (plotContainer) {
+          plotContainer.innerHTML = `<p style="color: red; padding: 20px;">Error: ${error.message || 'Unknown error'}. Check console for details.</p>`;
+        }
+      }
+    };
+
+    const initPlotApplet = (container) => {
+      const taskMetrics = (container.dataset.taskMetrics || 'snr').split(",");
+
+      const plotContainer = document.createElement('div');
+      plotContainer.className = 'plot-container';
+      container.appendChild(plotContainer);
+
+      const statsContainer = document.createElement('div');
+      statsContainer.className = 'stats-container';
+      container.appendChild(statsContainer);
+
+      updatePlot(container, taskMetrics);
+
+      // Resize handler
+      const resizePlot = () => {
+        const plotDiv = container.querySelector('.plot-container');
+        if (plotDiv && plotDiv.data) {
+          window.Plotly.relayout(plotDiv, { width: container.offsetWidth });
+        }
+      };
+
+      window.addEventListener('resize', resizePlot);
+    };
+
+    // Bootstrap function
+    const bootstrap = async () => {
+      try {
+        console.log('Loading dependencies...');
+        await loadDependencies();
+        console.log('Dependencies loaded. Plotly:', typeof window.Plotly, 'lodash:', typeof window._);
+
+        const containers = document.querySelectorAll('.task-signal-plot');
+        console.log('Found containers:', containers.length);
+
+        containers.forEach(container => {
+          if (container.dataset.mounted === 'true') return;
+          container.dataset.mounted = 'true';
+          console.log('Initializing plot for:', container.dataset.task);
+          initPlotApplet(container);
+        });
+      } catch (error) {
+        console.error('Bootstrap error:', error);
+      }
+    };
+
+    // Run bootstrap
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
+    } else {
+      bootstrap();
+    }
+  })();
+</script>

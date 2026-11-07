@@ -1,0 +1,266 @@
+<div class="d3-prompt-evolution">
+  <svg viewBox="0 0 900 370" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrowhead-prompt" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+        <polygon points="0 0, 10 3, 0 6" fill="currentColor" />
+      </marker>
+    </defs>
+    
+    <!-- Stage 1: Raw Text -->
+    <g class="stage">
+      <rect x="30" y="40" width="240" height="140" rx="8" class="stage-box stage-1"/>
+      <text x="150" y="65" text-anchor="middle" class="stage-title">Raw Text</text>
+      <text x="150" y="85" text-anchor="middle" class="stage-subtitle">Early Models (before 2022)</text>
+      
+      <foreignObject x="45" y="95" width="210" height="80">
+        <div xmlns="http://www.w3.org/1999/xhtml" class="code-example">
+          <div class="code-line">Translate to French:</div>
+          <div class="code-line">Hello world</div>
+        </div>
+      </foreignObject>
+    </g>
+    
+    <!-- Arrow 1 -->
+    <path d="M 270 110 L 320 110" class="arrow" marker-end="url(#arrowhead-prompt)"/>
+    <text x="295" y="100" text-anchor="middle" class="arrow-label">Evolution</text>
+    
+    <!-- Stage 2: JSON + Chat Templates -->
+    <g class="stage">
+      <rect x="320" y="20" width="260" height="180" rx="8" class="stage-box stage-2"/>
+      <text x="450" y="45" text-anchor="middle" class="stage-title">Chat Templates (in JSON)</text>
+      <text x="450" y="65" text-anchor="middle" class="stage-subtitle">Chat Models (2022-2025)</text>
+      
+      <foreignObject x="335" y="75" width="230" height="120">
+        <div xmlns="http://www.w3.org/1999/xhtml" class="code-example">
+          <div class="code-line json-brace">{</div>
+          <div class="code-line indent">"role": "system",</div>
+          <div class="code-line indent">"content": "You are..."</div>
+          <div class="code-line json-brace">},</div>
+          <div class="code-line json-brace">{</div>
+          <div class="code-line indent">"role": "user",</div>
+          <div class="code-line indent">"content": "Hello"</div>
+          <div class="code-line json-brace">}</div>
+        </div>
+      </foreignObject>
+    </g>
+    
+    <!-- Arrow 2 -->
+    <path d="M 580 110 L 630 110" class="arrow" marker-end="url(#arrowhead-prompt)"/>
+    <text x="605" y="100" text-anchor="middle" class="arrow-label">Evolution</text>
+    
+    <!-- Stage 3: JSON + XML (Reasoning) -->
+    <g class="stage">
+      <rect x="630" y="10" width="240" height="200" rx="8" class="stage-box stage-3"/>
+      <text x="750" y="35" text-anchor="middle" class="stage-title">JSON + XML</text>
+      <text x="750" y="55" text-anchor="middle" class="stage-subtitle">Reasoning Models (2025+)</text>
+      
+      <foreignObject x="645" y="65" width="210" height="140">
+        <div xmlns="http://www.w3.org/1999/xhtml" class="code-example">
+          <div class="code-line json-brace">{</div>
+          <div class="code-line indent">"role": "assistant",</div>
+          <div class="code-line indent">"content": [</div>
+          <div class="code-line indent2 xml-tag">&lt;thinking&gt;</div>
+          <div class="code-line indent2">reasoning...</div>
+          <div class="code-line indent2 xml-tag">&lt;/thinking&gt;</div>
+          <div class="code-line indent2 xml-tag">&lt;output&gt;</div>
+          <div class="code-line indent2">response</div>
+          <div class="code-line indent2 xml-tag">&lt;/output&gt;</div>
+          <div class="code-line indent">]</div>
+          <div class="code-line json-brace">}</div>
+        </div>
+      </foreignObject>
+    </g>
+    
+    <!-- Key Features Labels -->
+    <g class="features">
+      <text x="150" y="200" text-anchor="middle" class="feature-label">• Simple prompts</text>
+      <text x="150" y="220" text-anchor="middle" class="feature-label">• Generally no structure</text>
+      <text x="150" y="240" text-anchor="middle" class="feature-label">• Completion-based</text>
+    </g>
+    
+    <g class="features">
+      <text x="450" y="220" text-anchor="middle" class="feature-label">• Role separation</text>
+      <text x="450" y="240" text-anchor="middle" class="feature-label">• Chat/Turn-based</text>
+    </g>
+    
+    <g class="features">
+      <text x="750" y="230" text-anchor="middle" class="feature-label">• Chat/Turn-based</text>
+      <text x="750" y="250" text-anchor="middle" class="feature-label">with added tags for control</text>
+    </g>
+    
+    <!-- Timeline -->
+    <line x1="50" y1="320" x2="850" y2="320" class="timeline"/>
+    <circle cx="150" cy="320" r="6" class="timeline-dot"/>
+    <circle cx="450" cy="320" r="6" class="timeline-dot"/>
+    <circle cx="750" cy="320" r="6" class="timeline-dot"/>
+    
+    <text x="150" y="345" text-anchor="middle" class="timeline-label">Before 2022</text>
+    <text x="450" y="345" text-anchor="middle" class="timeline-label">2022-2025</text>
+    <text x="750" y="345" text-anchor="middle" class="timeline-label">2025+</text>
+  </svg>
+</div>
+<style>
+  .d3-prompt-evolution {
+    position: relative;
+    width: 100%;
+  }
+  .d3-prompt-evolution svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  
+  /* Stage boxes */
+  .d3-prompt-evolution .stage-box {
+    stroke-width: 2;
+  }
+  .d3-prompt-evolution .stage-1 {
+    fill: #e3f2fd;
+    stroke: #1976d2;
+  }
+  .d3-prompt-evolution .stage-2 {
+    fill: #f3e5f5;
+    stroke: #7b1fa2;
+  }
+  .d3-prompt-evolution .stage-3 {
+    fill: #e8f5e9;
+    stroke: #388e3c;
+  }
+  
+  [data-theme="dark"] .d3-prompt-evolution .stage-1 {
+    fill: rgba(25, 118, 210, 0.15);
+  }
+  [data-theme="dark"] .d3-prompt-evolution .stage-2 {
+    fill: rgba(123, 31, 162, 0.15);
+  }
+  [data-theme="dark"] .d3-prompt-evolution .stage-3 {
+    fill: rgba(56, 142, 60, 0.15);
+  }
+  
+  /* Text styles */
+  .d3-prompt-evolution .stage-title {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    fill: var(--text-color, #333);
+  }
+  .d3-prompt-evolution .stage-subtitle {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 11px;
+    fill: var(--muted-color, #666);
+  }
+  
+  /* Code examples */
+  .d3-prompt-evolution .code-example {
+    font-family: 'Monaco', 'Courier New', monospace;
+    font-size: 9px;
+    line-height: 1.4;
+    color: var(--text-color, #333);
+    padding: 4px;
+  }
+  .d3-prompt-evolution .code-line {
+    margin: 1px 0;
+  }
+  .d3-prompt-evolution .indent {
+    padding-left: 12px;
+  }
+  .d3-prompt-evolution .indent2 {
+    padding-left: 24px;
+  }
+  .d3-prompt-evolution .json-brace {
+    color: var(--primary-color, #1976d2);
+    font-weight: 600;
+  }
+  .d3-prompt-evolution .xml-tag {
+    color: #d32f2f;
+    font-weight: 600;
+  }
+  
+  /* Arrows */
+  .d3-prompt-evolution .arrow {
+    fill: none;
+    stroke: var(--muted-color, #999);
+    stroke-width: 2;
+    color: var(--muted-color, #999);
+  }
+  .d3-prompt-evolution .arrow-label {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 10px;
+    font-style: italic;
+    fill: var(--muted-color, #666);
+  }
+  
+  /* Feature labels */
+  .d3-prompt-evolution .feature-label {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 11px;
+    fill: var(--text-color, #555);
+  }
+  
+  /* Timeline */
+  .d3-prompt-evolution .timeline {
+    stroke: var(--border-color, #ddd);
+    stroke-width: 2;
+  }
+  .d3-prompt-evolution .timeline-dot {
+    fill: var(--primary-color, #1976d2);
+  }
+  .d3-prompt-evolution .timeline-label {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    fill: var(--text-color, #333);
+  }
+  .d3-prompt-evolution .model-example {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 11px;
+    font-style: italic;
+    fill: var(--muted-color, #666);
+  }
+  
+  /* Benefits section */
+  .d3-prompt-evolution .benefits-box {
+    fill: var(--surface-bg, #fafafa);
+    stroke: var(--border-color, #e0e0e0);
+    stroke-width: 1.5;
+  }
+  .d3-prompt-evolution .benefits-title {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    fill: var(--text-color, #333);
+  }
+  .d3-prompt-evolution .benefit-text {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 11px;
+    fill: var(--text-color, #555);
+  }
+  
+  [data-theme="dark"] .d3-prompt-evolution .benefits-box {
+    fill: rgba(255, 255, 255, 0.05);
+  }
+</style>
+<script>
+  (() => {
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-prompt-evolution'))) {
+        const candidates = Array.from(document.querySelectorAll('.d3-prompt-evolution'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
+    } else {
+      bootstrap();
+    }
+  })();
+</script>

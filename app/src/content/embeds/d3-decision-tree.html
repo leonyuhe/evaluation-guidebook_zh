@@ -1,0 +1,363 @@
+<div class="d3-decision-tree"></div>
+<style>
+  .d3-decision-tree {
+    position: relative;
+    width: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  }
+
+  .d3-decision-tree svg {
+    display: block;
+    overflow: hidden;
+  }
+
+  .d3-decision-tree .node-rect {
+    stroke: var(--border-color);
+    stroke-width: 2.5px;
+    rx: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  }
+
+  .d3-decision-tree .node-rect.start {
+    stroke: var(--primary-color);
+    stroke-width: 3.5px;
+    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.15));
+  }
+
+  .d3-decision-tree .node-rect.choice {
+    fill: var(--surface-bg);
+  }
+
+  .d3-decision-tree .node-rect.outcome {
+    fill: var(--surface-bg);
+    stroke-width: 2.5px;
+  }
+
+  .d3-decision-tree .node-rect:hover {
+    transform: scale(1.03);
+    stroke: var(--primary-color);
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
+  }
+
+  .d3-decision-tree .node-text {
+    fill: var(--text-color);
+    font-size: 13.5px;
+    font-weight: 500;
+    text-anchor: middle;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .d3-decision-tree .node-text.start {
+    font-weight: 700;
+    font-size: 15px;
+  }
+
+  .d3-decision-tree .node-text.outcome {
+    font-weight: 600;
+    font-size: 13.5px;
+  }
+
+  .d3-decision-tree .link {
+    fill: none;
+    stroke: var(--muted-color);
+    stroke-width: 2.5px;
+    stroke-opacity: 0.5;
+  }
+
+  .d3-decision-tree .link-label {
+    fill: var(--text-color);
+    font-size: 11px;
+    text-anchor: middle;
+    pointer-events: none;
+    user-select: none;
+    font-style: italic;
+    opacity: 0.7;
+    font-weight: 500;
+  }
+
+</style>
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => {
+        if (window.d3 && typeof window.d3.select === 'function') cb();
+      };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-decision-tree'))) {
+        const candidates = Array.from(document.querySelectorAll('.d3-decision-tree'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Decision tree data structure
+      const treeData = {
+        name: "Are you a...",
+        type: "start",
+        children: [
+          {
+            name: "Model Builder",
+            type: "choice",
+            edgeLabel: "model builder",
+            children: [
+              {
+                name: "Training goes well",
+                type: "choice",
+                edgeLabel: "make sure training\ngoes well",
+                children: [
+                  { name: "Ablations", type: "outcome" }
+                ]
+              },
+              {
+                name: "Compare models",
+                type: "choice",
+                edgeLabel: "compare models",
+                children: [
+                  { name: "Leaderboards", type: "outcome" },
+                  { name: "Design Your Evals", type: "outcome" }
+                ]
+              }
+            ]
+          },
+          {
+            name: "Model User",
+            type: "choice",
+            edgeLabel: "model user",
+            children: [
+              {
+                name: "Test on use case",
+                type: "choice",
+                edgeLabel: "test a model on\nyour use case",
+                children: [
+                  { name: "Design Your Evals", type: "outcome" },
+                  { name: "Vibe Checks", type: "outcome" }
+                ]
+              }
+            ]
+          },
+          {
+            name: "ML Enthusiast",
+            type: "choice",
+            edgeLabel: "ML enthusiast",
+            children: [
+              {
+                name: "Fun use cases",
+                type: "choice",
+                edgeLabel: "test a model on\nfun use cases",
+                children: [
+                  { name: "Vibe Checks", type: "outcome" },
+                  { name: "Fun Use Cases", type: "outcome" }
+                ]
+              }
+            ]
+          }
+        ]
+      };
+
+      // Get colors
+      const getColors = () => {
+        if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
+          return window.ColorPalettes.getColors('categorical', 3);
+        }
+        // Fallback colors
+        return ['#4e79a7', '#e15759', '#76b7b2'];
+      };
+
+      const colors = getColors();
+
+      // SVG setup
+      const svg = d3.select(container).append('svg').attr('width', '100%').style('display', 'block');
+      const gRoot = svg.append('g');
+
+      let width = 800, height = 600;
+      const margin = { top: 80, right: 120, bottom: 80, left: 120 };
+
+      function updateSize() {
+        width = container.clientWidth || 800;
+        height = Math.max(700, Math.round(width * 1.0));
+        svg.attr('width', width).attr('height', height);
+        gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+        return {
+          innerWidth: width - margin.left - margin.right,
+          innerHeight: height - margin.top - margin.bottom
+        };
+      }
+
+      function wrapText(text, maxWidth) {
+        const words = text.split(/\s+/);
+        const lines = [];
+        let currentLine = words[0];
+
+        for (let i = 1; i < words.length; i++) {
+          const testLine = currentLine + ' ' + words[i];
+          if (testLine.length * 7 < maxWidth) {
+            currentLine = testLine;
+          } else {
+            lines.push(currentLine);
+            currentLine = words[i];
+          }
+        }
+        lines.push(currentLine);
+        return lines;
+      }
+
+      function render() {
+        const { innerWidth, innerHeight } = updateSize();
+
+        // Create tree layout
+        const treeLayout = d3.tree().size([innerWidth, innerHeight]);
+        const root = d3.hierarchy(treeData);
+        treeLayout(root);
+
+        // Draw links
+        const links = gRoot.selectAll('.link')
+          .data(root.links())
+          .join('path')
+          .attr('class', 'link')
+          .attr('d', d3.linkVertical()
+            .x(d => d.x)
+            .y(d => d.y));
+
+        // Draw link labels - only for edges from level 0 to level 1
+        const linkLabels = gRoot.selectAll('.link-label')
+          .data(root.links().filter(d => d.source.depth === 0))
+          .join('text')
+          .attr('class', 'link-label')
+          .attr('x', d => d.source.x + (d.target.x - d.source.x) * 0.3)
+          .attr('y', d => d.source.y + (d.target.y - d.source.y) * 0.4)
+          .attr('dy', -5)
+          .each(function(d) {
+            const label = d.target.data.edgeLabel || '';
+            if (label) {
+              const lines = label.split('\n');
+              d3.select(this).selectAll('tspan').remove();
+              lines.forEach((line, i) => {
+                d3.select(this)
+                  .append('tspan')
+                  .attr('x', d.source.x + (d.target.x - d.source.x) * 0.3)
+                  .attr('dy', i === 0 ? 0 : 13)
+                  .text(line);
+              });
+            }
+          });
+
+        // Draw link labels for deeper levels (more compact)
+        const deeperLinkLabels = gRoot.selectAll('.link-label-deep')
+          .data(root.links().filter(d => d.source.depth > 0))
+          .join('text')
+          .attr('class', 'link-label link-label-deep')
+          .attr('x', d => d.source.x + (d.target.x - d.source.x) * 0.4)
+          .attr('y', d => d.source.y + (d.target.y - d.source.y) * 0.35)
+          .attr('dy', -5)
+          .style('font-size', '10px')
+          .each(function(d) {
+            const label = d.target.data.edgeLabel || '';
+            if (label) {
+              const lines = label.split('\n');
+              d3.select(this).selectAll('tspan').remove();
+              lines.forEach((line, i) => {
+                d3.select(this)
+                  .append('tspan')
+                  .attr('x', d.source.x + (d.target.x - d.source.x) * 0.4)
+                  .attr('dy', i === 0 ? 0 : 11)
+                  .text(line);
+              });
+            }
+          });
+
+        // Node dimensions - responsive based on depth
+        const getNodeDimensions = (depth) => {
+          if (depth === 0) return { width: 160, height: 60 };
+          if (depth === 1) return { width: 145, height: 55 };
+          if (depth === 2) return { width: 145, height: 55 };
+          return { width: 140, height: 50 };
+        };
+
+        // Draw nodes
+        const nodes = gRoot.selectAll('.node')
+          .data(root.descendants())
+          .join('g')
+          .attr('class', 'node')
+          .attr('transform', d => `translate(${d.x},${d.y})`);
+
+        // Node rectangles
+        nodes.selectAll('rect').remove();
+        nodes.append('rect')
+          .attr('class', d => `node-rect ${d.data.type}`)
+          .attr('x', d => -getNodeDimensions(d.depth).width / 2)
+          .attr('y', d => -getNodeDimensions(d.depth).height / 2)
+          .attr('width', d => getNodeDimensions(d.depth).width)
+          .attr('height', d => getNodeDimensions(d.depth).height)
+          .attr('fill', d => {
+            if (d.data.type === 'start') return colors[0];
+            if (d.data.type === 'outcome') return colors[2];
+            return colors[1];
+          })
+          .attr('fill-opacity', d => {
+            if (d.data.type === 'start') return 0.2;
+            if (d.data.type === 'outcome') return 0.25;
+            return 0.12;
+          });
+
+        // Node text
+        nodes.selectAll('text').remove();
+        nodes.append('text')
+          .attr('class', d => `node-text ${d.data.type}`)
+          .attr('dy', '0.35em')
+          .each(function(d) {
+            const nodeDims = getNodeDimensions(d.depth);
+            const lines = wrapText(d.data.name, nodeDims.width - 14);
+            const textEl = d3.select(this);
+            const lineHeight = 13.5;
+            const startY = -(lines.length - 1) * lineHeight / 2;
+
+            lines.forEach((line, i) => {
+              textEl.append('tspan')
+                .attr('x', 0)
+                .attr('dy', i === 0 ? startY : lineHeight)
+                .text(line);
+            });
+          });
+      }
+
+      // Initial render
+      render();
+
+      // Resize handling
+      const rerender = () => render();
+      if (window.ResizeObserver) {
+        const ro = new ResizeObserver(() => rerender());
+        ro.observe(container);
+      } else {
+        window.addEventListener('resize', rerender);
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    } else {
+      ensureD3(bootstrap);
+    }
+  })();
+</script>

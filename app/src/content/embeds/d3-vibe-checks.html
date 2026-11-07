@@ -1,0 +1,338 @@
+<div class="d3-vibe-checks"></div>
+
+<style>
+  .d3-vibe-checks {
+    font-family: var(--default-font-family);
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: var(--spacing-4) 0;
+    width: 100%;
+    margin: 0 auto;
+    position: relative;
+    box-shadow: none !important;
+  }
+
+  .d3-vibe-checks svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .d3-vibe-checks .card-rect {
+    stroke-width: 2;
+    transition: all 0.3s ease;
+  }
+
+  .d3-vibe-checks .card-title {
+    fill: var(--text-color);
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .d3-vibe-checks .card-question {
+    fill: var(--text-color);
+    font-size: 12px;
+    font-weight: 500;
+    font-style: italic;
+  }
+
+  .d3-vibe-checks .card-label {
+    fill: var(--muted-color);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .d3-vibe-checks .header-text {
+    fill: var(--text-color);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  @media (max-width: 768px) {
+    .d3-vibe-checks .card-title {
+      font-size: 11px;
+    }
+
+    .d3-vibe-checks .card-question {
+      font-size: 10px;
+    }
+  }
+</style>
+
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => {
+        if (window.d3 && typeof window.d3.select === 'function') cb();
+      };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-vibe-checks'))) {
+        const candidates = Array.from(document.querySelectorAll('.d3-vibe-checks'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+
+      if (!container) return;
+
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Get colors from ColorPalettes or fallback
+      const getColors = () => {
+        if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
+          return window.ColorPalettes.getColors('categorical', 3);
+        }
+        return ['#1f77b4', '#ff7f0e', '#2ca02c'];
+      };
+
+      // Vibe-check examples
+      const vibeChecks = [
+        {
+          id: 'strawberry',
+          title: 'Letter Counting',
+          question: 'How many "r"s in "strawberry"?',
+          category: 'Reasoning',
+          answers: [
+            { label: 'Model A', text: '3', correct: true },
+            { label: 'Model B', text: '2', correct: false }
+          ]
+        },
+        {
+          id: 'numbers',
+          title: 'Number Comparison',
+          question: 'Is 9.9 bigger or smaller than 9.11?',
+          category: 'Math',
+          answers: [
+            { label: 'Model A', text: '9.9 < 9.11', correct: false },
+            { label: 'Model B', text: '9.9 > 9.11', correct: true }
+          ]
+        },
+        {
+          id: 'tikz',
+          title: 'Creative Generation',
+          question: 'Draw a unicorn in TikZ',
+          category: 'Coding',
+          answers: [
+            { label: 'Model A', text: '\\draw[...] unicorn', correct: true },
+            { label: 'Model B', text: 'Error: invalid', correct: false }
+          ]
+        }
+      ];
+
+      // Function to draw model answers
+      function drawAnswers(g, x, y, width, answers, color) {
+        const answerHeight = 25;
+        const answerSpacing = 8;
+        const startY = y;
+
+        answers.forEach((answer, i) => {
+          const answerY = startY + i * (answerHeight + answerSpacing);
+
+          // Answer box
+          const boxGroup = g.append('g');
+
+          boxGroup.append('rect')
+            .attr('x', x - width / 2 + 10)
+            .attr('y', answerY)
+            .attr('width', width - 20)
+            .attr('height', answerHeight)
+            .attr('rx', 6)
+            .attr('fill', color)
+            .attr('fill-opacity', answer.correct ? 0.2 : 0.08)
+            .attr('stroke', color)
+            .attr('stroke-width', 1.5)
+            .attr('stroke-opacity', answer.correct ? 0.6 : 0.3);
+
+          // Combined label and answer text
+          const labelText = answer.label + ': ';
+          const combinedText = labelText + answer.text;
+
+          boxGroup.append('text')
+            .attr('x', x - width / 2 + 18)
+            .attr('y', answerY + answerHeight / 2)
+            .attr('dominant-baseline', 'middle')
+            .attr('font-size', 11)
+            .attr('fill', color)
+            .html(() => {
+              return `<tspan font-weight="600" opacity="0.8" font-size="10">${answer.label}: </tspan><tspan font-weight="${answer.correct ? 600 : 400}" opacity="${answer.correct ? 1 : 0.6}">${answer.text}</tspan>`;
+            });
+
+          // Checkmark or X
+          if (answer.correct) {
+            boxGroup.append('text')
+              .attr('x', x + width / 2 - 28)
+              .attr('y', answerY + answerHeight / 2)
+              .attr('dominant-baseline', 'middle')
+              .attr('font-size', 14)
+              .attr('font-weight', 700)
+              .attr('fill', color)
+              .text('✓');
+          } else {
+            boxGroup.append('text')
+              .attr('x', x + width / 2 - 28)
+              .attr('y', answerY + answerHeight / 2)
+              .attr('dominant-baseline', 'middle')
+              .attr('font-size', 14)
+              .attr('font-weight', 400)
+              .attr('fill', color)
+              .attr('opacity', 0.4)
+              .text('✗');
+          }
+        });
+      }
+
+      const svg = d3.select(container).append('svg');
+      const g = svg.append('g');
+
+      let width = 800;
+      let height = 300;
+
+      // Helper function to wrap text
+      function wrapText(text, width) {
+        text.each(function() {
+          const text = d3.select(this);
+          const words = text.text().split(/\s+/).reverse();
+          let word;
+          let line = [];
+          let lineNumber = 0;
+          const lineHeight = 1.2;
+          const y = text.attr('y');
+          const x = text.attr('x');
+          const dy = parseFloat(text.attr('dy') || 0);
+          let tspan = text.text(null).append('tspan')
+            .attr('x', x)
+            .attr('y', y)
+            .attr('dy', dy + 'em');
+
+          while ((word = words.pop())) {
+            line.push(word);
+            tspan.text(line.join(' '));
+            if (tspan.node().getComputedTextLength() > width) {
+              line.pop();
+              tspan.text(line.join(' '));
+              line = [word];
+              tspan = text.append('tspan')
+                .attr('x', x)
+                .attr('y', y)
+                .attr('dy', ++lineNumber * lineHeight + dy + 'em')
+                .text(word);
+            }
+          }
+        });
+      }
+
+      function render() {
+        width = container.clientWidth || 800;
+        height = Math.max(250, Math.round(width * 0.4));
+
+        svg.attr('width', width).attr('height', height);
+
+        const margin = { top: 40, right: 20, bottom: 20, left: 20 };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        g.attr('transform', `translate(${margin.left},${margin.top})`);
+
+        // Clear previous content
+        g.selectAll('*').remove();
+
+        const colors = getColors();
+
+        // Header
+        g.append('text')
+          .attr('class', 'header-text')
+          .attr('x', innerWidth / 2)
+          .attr('y', -15)
+          .attr('text-anchor', 'middle')
+          .text('VIBE-CHECK EXAMPLES');
+
+        // Calculate card dimensions
+        const cardSpacing = Math.min(20, innerWidth * 0.03);
+        const cardWidth = (innerWidth - cardSpacing * 2) / 3;
+        const cardHeight = innerHeight * 0.85;
+        const cardY = innerHeight * 0.1;
+
+        // Draw cards
+        vibeChecks.forEach((check, i) => {
+          const x = i * (cardWidth + cardSpacing);
+
+          const cardGroup = g.append('g')
+            .attr('transform', `translate(${x},${cardY})`);
+
+          // Card background with frame
+          cardGroup.append('rect')
+            .attr('class', 'card-rect')
+            .attr('width', cardWidth)
+            .attr('height', cardHeight)
+            .attr('rx', 12)
+            .attr('fill', colors[i])
+            .attr('fill-opacity', 0.12)
+            .attr('stroke', colors[i])
+            .attr('stroke-opacity', 0.6)
+            .attr('stroke-width', 2);
+
+          // Title
+          cardGroup.append('text')
+            .attr('class', 'card-title')
+            .attr('x', cardWidth / 2)
+            .attr('y', 25)
+            .attr('text-anchor', 'middle')
+            .text(check.title);
+
+          // Question with wrapping
+          const questionText = cardGroup.append('text')
+            .attr('class', 'card-question')
+            .attr('x', cardWidth / 2)
+            .attr('y', 45)
+            .attr('text-anchor', 'middle')
+            .attr('dy', 0)
+            .text(check.question);
+
+          // Apply text wrapping
+          wrapText(questionText, cardWidth - 30);
+
+          // Model answers
+          const answersY = cardHeight * 0.5;
+          drawAnswers(cardGroup, cardWidth / 2, answersY, cardWidth, check.answers, colors[i]);
+        });
+      }
+
+      render();
+
+      // Responsive handling
+      if (window.ResizeObserver) {
+        const ro = new ResizeObserver(() => render());
+        ro.observe(container);
+      } else {
+        window.addEventListener('resize', render);
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    } else {
+      ensureD3(bootstrap);
+    }
+  })();
+</script>

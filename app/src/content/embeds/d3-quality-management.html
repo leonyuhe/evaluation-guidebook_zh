@@ -1,0 +1,254 @@
+<div class="d3-quality-management"></div>
+
+<style>
+  .d3-quality-management {
+    font-family: var(--default-font-family);
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    width: 100%;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .d3-quality-management .quality-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-4);
+    margin-bottom: var(--spacing-4);
+  }
+
+  .d3-quality-management .quality-card {
+    background: oklch(from var(--primary-color) calc(l + 0.4) c h / 0.35);
+    border: 1px solid oklch(from var(--primary-color) calc(l + 0.15) c h / 0.6);
+    border-radius: 16px;
+    padding: var(--spacing-4) var(--spacing-5);
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    min-height: 160px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  .d3-quality-management .quality-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    border-color: var(--primary-color);
+  }
+
+  /* Dark mode adjustments for better readability */
+  [data-theme="dark"] .d3-quality-management .quality-card {
+    background: oklch(from var(--primary-color) calc(l + 0.3) c h / 0.25);
+    border-color: oklch(from var(--primary-color) calc(l + 0.1) c h / 0.65);
+  }
+
+  [data-theme="dark"] .d3-quality-management .quality-card:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+
+  .d3-quality-management .category-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: var(--spacing-3);
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Dark mode adjustments for better readability */
+  [data-theme="dark"] .d3-quality-management .category-title {
+    color: oklch(from var(--primary-color) calc(l + 0.1) calc(c * 1.2) h);
+  }
+
+  .d3-quality-management .category-items {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-color);
+    line-height: 1.6;
+    font-weight: 500;
+    position: relative;
+    z-index: 1;
+  }
+
+  .d3-quality-management .category-items li {
+    padding-left: 1.6em;
+    position: relative;
+    margin-bottom: var(--spacing-1);
+  }
+
+  .d3-quality-management .category-items li::before {
+    content: "•";
+    position: absolute;
+    left: 0.4em;
+    top: 0;
+    color: var(--primary-color);
+    font-weight: 600;
+  }
+
+  /* Dark mode adjustments for better readability */
+  [data-theme="dark"] .d3-quality-management .category-items {
+    color: var(--text-color);
+  }
+
+  .d3-quality-management .bottom-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-4);
+  }
+
+  .d3-quality-management .caption {
+    margin-top: var(--spacing-4);
+    font-size: 13px;
+    color: var(--muted-color);
+    line-height: 1.5;
+    font-style: italic;
+  }
+
+  @media (max-width: 1024px) {
+    .d3-quality-management .quality-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .d3-quality-management .bottom-row {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .d3-quality-management {
+      padding: var(--spacing-3) 0;
+    }
+
+    .d3-quality-management .quality-grid {
+      grid-template-columns: 1fr;
+      gap: var(--spacing-3);
+    }
+
+    .d3-quality-management .bottom-row {
+      grid-template-columns: 1fr;
+      gap: var(--spacing-3);
+    }
+
+    .d3-quality-management .quality-card {
+      min-height: 140px;
+      padding: var(--spacing-3) var(--spacing-4);
+    }
+  }
+</style>
+
+<script>
+  (() => {
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-quality-management'))) {
+        const candidates = Array.from(document.querySelectorAll('.d3-quality-management'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+
+      if (!container) return;
+
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Data structure for quality management categories
+      const categories = [
+        {
+          title: 'Annotation Process',
+          items: [
+            'Iterative Annotation',
+            'Careful Data Selection',
+            'Annotation Scheme',
+            'Guideline Design',
+            'Pilot Study',
+            'Validation Step'
+          ]
+        },
+        {
+          title: 'Annotators',
+          items: [
+            'Workforce Selection',
+            'Qualification Test',
+            'Annotator Training',
+            'Annotator Debriefing',
+            'Monetary Incentive'
+          ]
+        },
+        {
+          title: 'Quality Estimation',
+          items: [
+            'Error Rate',
+            'Control Questions',
+            'Agreement'
+          ]
+        },
+        {
+          title: 'Quality Improvement',
+          items: [
+            'Correction',
+            'Updated Guidelines',
+            'Filtering',
+            'Annotator Feedback',
+            'Annotator Deboarding'
+          ]
+        },
+        {
+          title: 'Adjudication',
+          items: [
+            'Manual Curation',
+            'Majority Voting',
+            'Probabilistic Aggregation'
+          ]
+        }
+      ];
+
+      // Create the quality management structure
+      const topRowHtml = categories.slice(0, 3).map(cat => `
+        <div class="quality-card">
+          <div class="category-title">${cat.title}</div>
+          <ul class="category-items">
+            ${cat.items.map(item => `<li>${item}</li>`).join('')}
+          </ul>
+        </div>
+      `).join('');
+
+      const bottomRowHtml = categories.slice(3).map(cat => `
+        <div class="quality-card">
+          <div class="category-title">${cat.title}</div>
+          <ul class="category-items">
+            ${cat.items.map(item => `<li>${item}</li>`).join('')}
+          </ul>
+        </div>
+      `).join('');
+
+      container.innerHTML = `
+        <div class="quality-grid">
+          ${topRowHtml}
+        </div>
+        <div class="bottom-row">
+          ${bottomRowHtml}
+        </div>
+        <div class="caption">
+          <strong>Figure 1:</strong> Data annotation best practices recommended by the comprehensive review at aclanthology.org/2024.cl-3.1 - check out their Section 3.
+        </div>
+      `;
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
+    } else {
+      bootstrap();
+    }
+  })();
+</script>

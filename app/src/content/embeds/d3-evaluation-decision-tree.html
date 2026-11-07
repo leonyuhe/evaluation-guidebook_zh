@@ -1,0 +1,333 @@
+<div class="d3-evaluation-tree"></div>
+<style>
+  .d3-evaluation-tree {
+    position: relative;
+    width: 100%;
+    min-height: 500px;
+    overflow: visible;
+  }
+  .d3-evaluation-tree svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .d3-evaluation-tree .node-rect {
+    stroke-width: 2;
+    rx: 8;
+    ry: 8;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .d3-evaluation-tree .decision-node {
+    stroke: var(--border-color);
+  }
+  .d3-evaluation-tree .result-node {
+    stroke: var(--border-color);
+  }
+  .d3-evaluation-tree .warning-node {
+    stroke: var(--border-color);
+  }
+  .d3-evaluation-tree .node-text {
+    fill: var(--text-color);
+    font-size: 12px;
+    font-weight: 500;
+    pointer-events: none;
+    user-select: none;
+  }
+  .d3-evaluation-tree .link {
+    fill: none;
+    stroke: var(--border-color);
+    stroke-width: 1.5;
+    opacity: 0.5;
+  }
+  .d3-evaluation-tree .link-label {
+    fill: var(--muted-color);
+    font-size: 10px;
+    font-weight: 500;
+  }
+  .d3-evaluation-tree .node-rect:hover {
+    filter: brightness(1.05);
+    stroke-width: 3;
+  }
+  .d3-evaluation-tree .d3-tooltip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translate(-9999px, -9999px);
+    pointer-events: none;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.35;
+    border: 1px solid var(--border-color);
+    background: var(--surface-bg);
+    color: var(--text-color);
+    box-shadow: 0 4px 24px rgba(0,0,0,.18);
+    opacity: 0;
+    transition: opacity .12s ease;
+    max-width: 250px;
+  }
+</style>
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => {
+        if (window.d3 && typeof window.d3.select === 'function') cb();
+      };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-evaluation-tree'))) {
+        const candidates = Array.from(document.querySelectorAll('.d3-evaluation-tree'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Tooltip setup
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip');
+      let tipInner;
+      if (!tip) {
+        tip = document.createElement('div');
+        tip.className = 'd3-tooltip';
+        tipInner = document.createElement('div');
+        tipInner.className = 'd3-tooltip__inner';
+        tipInner.style.textAlign = 'left';
+        tip.appendChild(tipInner);
+        container.appendChild(tip);
+      } else {
+        tipInner = tip.querySelector('.d3-tooltip__inner') || tip;
+      }
+
+      // Get colors from ColorPalettes with fallback
+      const getColors = () => {
+        if (window.ColorPalettes && window.ColorPalettes.getColors) {
+          return {
+            decision: window.ColorPalettes.getColors('sequential', 3)[0],
+            result: window.ColorPalettes.getColors('sequential', 3)[2],
+            warning: window.ColorPalettes.getColors('diverging', 3)[1]
+          };
+        }
+        // Fallback colors
+        return {
+          decision: '#60A5FA',
+          result: '#34D399',
+          warning: '#FBBF24'
+        };
+      };
+
+      // Define the decision tree structure
+      const treeData = {
+        name: "What are you\nevaluating?",
+        type: "decision",
+        tooltip: "Starting point: Identify your evaluation task",
+        children: [
+          {
+            name: "Have gold\nstandard?",
+            edgeLabel: "Start",
+            type: "decision",
+            tooltip: "Do you have a clear, correct reference answer?",
+            children: [
+              {
+                name: "Objective &\nverifiable?",
+                edgeLabel: "Yes",
+                type: "decision",
+                tooltip: "Is the answer factual and unambiguous?",
+                children: [
+                  {
+                    name: "Format\nconstrained?",
+                    edgeLabel: "Yes",
+                    type: "decision",
+                    tooltip: "Can you verify output structure programmatically?",
+                    children: [
+                      {
+                        name: "Functional\nTesting",
+                        edgeLabel: "Yes",
+                        type: "result",
+                        tooltip: "Use IFEval-style functional tests or unit tests"
+                      },
+                      {
+                        name: "Automated\nMetrics",
+                        edgeLabel: "No",
+                        type: "result",
+                        tooltip: "Use exact match, F1, BLEU, etc."
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                name: "Human Eval\nor Judges",
+                edgeLabel: "Subjective",
+                type: "warning",
+                tooltip: "Multiple valid answers exist; need human judgment or model judges"
+              }
+            ]
+          },
+          {
+            name: "Budget &\nscale?",
+            edgeLabel: "No gold",
+            type: "decision",
+            tooltip: "No reference answer available",
+            children: [
+              {
+                name: "Expert Human\nAnnotators",
+                edgeLabel: "High",
+                type: "result",
+                tooltip: "Best for critical use cases (medical, legal)"
+              },
+              {
+                name: "Model Judges\n(validate!)",
+                edgeLabel: "Medium",
+                type: "warning",
+                tooltip: "Validate judge quality against human baseline"
+              },
+              {
+                name: "Arena or\nVibe-checks",
+                edgeLabel: "Low",
+                type: "warning",
+                tooltip: "Crowdsourced or exploratory evaluation"
+              }
+            ]
+          }
+        ]
+      };
+
+      // SVG setup
+      const svg = d3.select(container).append('svg');
+      const g = svg.append('g').attr('transform', 'translate(40, 30)');
+
+      let width = container.clientWidth || 900;
+      const nodeWidth = 140;
+      const nodeHeight = 50;
+
+      function render() {
+        const colors = getColors();
+        width = container.clientWidth || 900;
+
+        const treeLayout = d3.tree()
+          .size([width - 80, 500])
+          .separation((a, b) => (a.parent === b.parent ? 1.3 : 1.6));
+
+        const root = d3.hierarchy(treeData);
+        const treeNodes = treeLayout(root);
+
+        const maxDepth = root.height;
+        const height = (maxDepth + 1) * 120 + 60;
+
+        svg.attr('viewBox', `0 0 ${width} ${height}`)
+           .attr('preserveAspectRatio', 'xMidYMin meet');
+
+        // Clear previous
+        g.selectAll('*').remove();
+
+        // Links
+        g.selectAll('.link')
+          .data(treeNodes.links())
+          .join('path')
+          .attr('class', 'link')
+          .attr('d', d3.linkVertical()
+            .x(d => d.x)
+            .y(d => d.y)
+          );
+
+        // Link labels
+        g.selectAll('.link-label')
+          .data(treeNodes.links().filter(d => d.target.data.edgeLabel))
+          .join('text')
+          .attr('class', 'link-label')
+          .attr('x', d => d.target.x)
+          .attr('y', d => (d.source.y + d.target.y) / 2 - 5)
+          .attr('text-anchor', 'middle')
+          .text(d => d.target.data.edgeLabel);
+
+        // Node groups
+        const nodes = g.selectAll('.node')
+          .data(treeNodes.descendants())
+          .join('g')
+          .attr('class', 'node')
+          .attr('transform', d => `translate(${d.x},${d.y})`)
+          .on('mouseenter', function(event, d) {
+            if (d.data.tooltip) {
+              const [mx, my] = d3.pointer(event, container);
+              tip.style.opacity = '1';
+              tip.style.transform = `translate(${mx + 10}px, ${my - 10}px)`;
+              tipInner.textContent = d.data.tooltip;
+            }
+          })
+          .on('mouseleave', function() {
+            tip.style.opacity = '0';
+            tip.style.transform = 'translate(-9999px, -9999px)';
+          });
+
+        // Rectangles
+        nodes.append('rect')
+          .attr('class', d => {
+            if (d.data.type === 'result') return 'node-rect result-node';
+            if (d.data.type === 'warning') return 'node-rect warning-node';
+            return 'node-rect decision-node';
+          })
+          .attr('x', -nodeWidth / 2)
+          .attr('y', -nodeHeight / 2)
+          .attr('width', nodeWidth)
+          .attr('height', nodeHeight)
+          .attr('fill', d => {
+            if (d.data.type === 'result') return colors.result;
+            if (d.data.type === 'warning') return colors.warning;
+            return colors.decision;
+          });
+
+        // Text (multiline support)
+        nodes.each(function(d) {
+          const nodeG = d3.select(this);
+          const lines = d.data.name.split('\n');
+          const lineHeight = 14;
+          const startY = -(lines.length - 1) * lineHeight / 2;
+
+          lines.forEach((line, i) => {
+            nodeG.append('text')
+              .attr('class', 'node-text')
+              .attr('text-anchor', 'middle')
+              .attr('y', startY + i * lineHeight)
+              .attr('dy', '0.35em')
+              .text(line);
+          });
+        });
+      }
+
+      // Initial render
+      render();
+
+      // Responsive resize
+      if (window.ResizeObserver) {
+        const ro = new ResizeObserver(() => render());
+        ro.observe(container);
+      } else {
+        window.addEventListener('resize', render);
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    } else {
+      ensureD3(bootstrap);
+    }
+  })();
+</script>

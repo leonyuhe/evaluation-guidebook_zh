@@ -1,0 +1,549 @@
+{
+  "baselines": {
+    "ARC": 85,
+    "HellaSwag": 95,
+    "MMLU": 85,
+    "TruthfulQA": 90,
+    "Winogrande": 92.5,
+    "GSM8K": 98.5
+  },
+  "benchmarks": {
+    "ARC": [
+      {
+        "date": "2023-07-19",
+        "score": 22.01,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/gpt2\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">gpt2</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_gpt2\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-07-19",
+        "score": 30.29,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/gpt2-xl\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">gpt2-xl</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_gpt2-xl\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-08-25",
+        "score": 50.43,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/bigscience/bloom\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">bigscience/bloom</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_bigscience__bloom\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-08-29",
+        "score": 58.28,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/StudentLLM/Alpagasus-2-13B-QLoRA-pipeline\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">StudentLLM/Alpagasus-2-13B-QLoRA-pipeline</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_StudentLLM__Alpagasus-2-13B-QLoRA-pipeline\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 63.05,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/CalderaAI/30B-Epsilon\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">CalderaAI/30B-Epsilon</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_CalderaAI__30B-Epsilon\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 65.27,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/Aeala/Alpaca-elina-65b\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">Aeala/Alpaca-elina-65b</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_Aeala__Alpaca-elina-65b\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 67.41,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/NousResearch/Nous-Puffin-70B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">NousResearch/Nous-Puffin-70B</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_NousResearch__Nous-Puffin-70B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 67.66,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/TheBloke/fiction.live-Kimiko-V2-70B-fp16\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">TheBloke/fiction.live-Kimiko-V2-70B-fp16</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_TheBloke__fiction.live-Kimiko-V2-70B-fp16\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 68.26,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/TheBloke/llama-2-70b-Guanaco-QLoRA-fp16\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">TheBloke/llama-2-70b-Guanaco-QLoRA-fp16</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_TheBloke__llama-2-70b-Guanaco-QLoRA-fp16\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 68.34,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/augtoma/qCammel-70\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">augtoma/qCammel-70</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_augtoma__qCammel-70\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 71.25,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/chargoddard/MelangeA-70b\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">chargoddard/MelangeA-70b</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_chargoddard__MelangeA-70b\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 71.67,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/chargoddard/MelangeB-70b\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">chargoddard/MelangeB-70b</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_chargoddard__MelangeB-70b\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 72.1,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/fangloveskari/Platypus_QLoRA_LLaMA_70b\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">fangloveskari/Platypus_QLoRA_LLaMA_70b</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_fangloveskari__Platypus_QLoRA_LLaMA_70b\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-10-16",
+        "score": 72.27,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/fangloveskari/ORCA_LLaMA_70B_QLoRA\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">fangloveskari/ORCA_LLaMA_70B_QLoRA</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_fangloveskari__ORCA_LLaMA_70B_QLoRA\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-10-16",
+        "score": 73.04,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/ICBU-NPU/FashionGPT-70B-V1.2\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">ICBU-NPU/FashionGPT-70B-V1.2</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_ICBU-NPU__FashionGPT-70B-V1.2\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-11-06",
+        "score": 73.55,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/AIDC-ai-business/Marcoroni-70B-v1\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">AIDC-ai-business/Marcoroni-70B-v1</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_AIDC-ai-business__Marcoroni-70B-v1\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-12-07",
+        "score": 87.46,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/DopeorNope/COKAL-v1-70B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">DopeorNope/COKAL-v1-70B</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_DopeorNope__COKAL-v1-70B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      }
+    ],
+    "HellaSwag": [
+      {
+        "date": "2023-07-19",
+        "score": 31.53,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/gpt2\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">gpt2</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_gpt2\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-07-19",
+        "score": 51.36,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/gpt2-xl\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">gpt2-xl</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_gpt2-xl\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-08-25",
+        "score": 76.41,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/bigscience/bloom\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">bigscience/bloom</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_bigscience__bloom\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-08-29",
+        "score": 80.98,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/StudentLLM/Alpagasus-2-13B-QLoRA-pipeline\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">StudentLLM/Alpagasus-2-13B-QLoRA-pipeline</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_StudentLLM__Alpagasus-2-13B-QLoRA-pipeline\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 83.59,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/CalderaAI/30B-Epsilon\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">CalderaAI/30B-Epsilon</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_CalderaAI__30B-Epsilon\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 85.75,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/Aeala/Alpaca-elina-65b\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">Aeala/Alpaca-elina-65b</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_Aeala__Alpaca-elina-65b\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 87.37,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/NousResearch/Nous-Puffin-70B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">NousResearch/Nous-Puffin-70B</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_NousResearch__Nous-Puffin-70B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 87.65,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/TheBloke/fiction.live-Kimiko-V2-70B-fp16\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">TheBloke/fiction.live-Kimiko-V2-70B-fp16</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_TheBloke__fiction.live-Kimiko-V2-70B-fp16\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 88.32,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/TheBloke/llama-2-70b-Guanaco-QLoRA-fp16\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">TheBloke/llama-2-70b-Guanaco-QLoRA-fp16</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_TheBloke__llama-2-70b-Guanaco-QLoRA-fp16\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-15",
+        "score": 88.86,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/tiiuae/falcon-180B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">tiiuae/falcon-180B</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_tiiuae__falcon-180B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-15",
+        "score": 88.89,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/tiiuae/falcon-180B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">tiiuae/falcon-180B</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_tiiuae__falcon-180B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-12-14",
+        "score": 90.11,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/Sao10K/WinterGoddess-1.4x-70B-L2\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">Sao10K/WinterGoddess-1.4x-70B-L2</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_Sao10K__WinterGoddess-1.4x-70B-L2\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2024-01-19",
+        "score": 90.58,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/bhavinjawade/SuperAligned-Jawade\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">bhavinjawade/SuperAligned-Jawade</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_bhavinjawade__SuperAligned-Jawade\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2024-03-09",
+        "score": 91.82,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/saltlux/luxia-21.4b-alignment-v1.0\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">saltlux/luxia-21.4b-alignment-v1.0</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_saltlux__luxia-21.4b-alignment-v1.0\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2024-03-11",
+        "score": 91.88,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/saltlux/luxia-21.4b-alignment-v1.0\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">saltlux/luxia-21.4b-alignment-v1.0</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_saltlux__luxia-21.4b-alignment-v1.0\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2024-05-14",
+        "score": 92.75,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/swap-uniba/LLaMAntino-3-ANITA-8B-Inst-DPO-ITA\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">swap-uniba/LLaMAntino-3-ANITA-8B-Inst-DPO-ITA</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_swap-uniba__LLaMAntino-3-ANITA-8B-Inst-DPO-ITA\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      }
+    ],
+    "MMLU": [
+      {
+        "date": "2023-07-19",
+        "score": 25.83,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/gpt2\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">gpt2</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_gpt2\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-07-19",
+        "score": 26.54,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/gpt2-xl\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">gpt2-xl</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_gpt2-xl\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-08-25",
+        "score": 30.85,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/bigscience/bloom\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">bigscience/bloom</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_bigscience__bloom\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-08-29",
+        "score": 54.14,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/StudentLLM/Alpagasus-2-13B-QLoRA-pipeline\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">StudentLLM/Alpagasus-2-13B-QLoRA-pipeline</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_StudentLLM__Alpagasus-2-13B-QLoRA-pipeline\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 56.89,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/CalderaAI/30B-Epsilon\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">CalderaAI/30B-Epsilon</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_CalderaAI__30B-Epsilon\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 63.42,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/Aeala/Alpaca-elina-65b\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">Aeala/Alpaca-elina-65b</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_Aeala__Alpaca-elina-65b\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 69.77,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/NousResearch/Nous-Puffin-70B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">NousResearch/Nous-Puffin-70B</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_NousResearch__Nous-Puffin-70B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 69.83,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/TheBloke/Llama-2-70B-fp16\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">TheBloke/Llama-2-70B-fp16</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_TheBloke__Llama-2-70B-fp16\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 70.23,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/TheBloke/llama-2-70b-Guanaco-QLoRA-fp16\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">TheBloke/llama-2-70b-Guanaco-QLoRA-fp16</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_TheBloke__llama-2-70b-Guanaco-QLoRA-fp16\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 78.59,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/Voicelab/trurl-2-13b\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">Voicelab/trurl-2-13b</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_Voicelab__trurl-2-13b\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-10-16",
+        "score": 78.66,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/Aspik101/trurl-2-13b-pl-instruct_unload\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">Aspik101/trurl-2-13b-pl-instruct_unload</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_Aspik101__trurl-2-13b-pl-instruct_unload\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-12-06",
+        "score": 78.78,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/kyujinpy/PlatYi-34B-Llama-Q\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">kyujinpy/PlatYi-34B-Llama-Q</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_kyujinpy__PlatYi-34B-Llama-Q\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2024-01-21",
+        "score": 85.63,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/AA051612/B0121\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">AA051612/B0121</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_AA051612__B0121\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2024-01-25",
+        "score": 86.64,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/AA051612/A0125\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">AA051612/A0125</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_AA051612__A0125\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2024-02-01",
+        "score": 88.78,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/AA051611/V0201\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">AA051611/V0201</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_AA051611__V0201\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2024-02-01",
+        "score": 89.35,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/AA051611/O0201\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">AA051611/O0201</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_AA051611__O0201\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      }
+    ],
+    "TruthfulQA": [
+      {
+        "date": "2023-07-19",
+        "score": 40.69,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/gpt2\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">gpt2</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_gpt2\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 42.13,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/AlpinDale/pygmalion-instruct\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">AlpinDale/pygmalion-instruct</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_AlpinDale__pygmalion-instruct\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 59.03,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/CalderaAI/30B-Epsilon\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">CalderaAI/30B-Epsilon</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_CalderaAI__30B-Epsilon\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 59.16,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/TheBloke/gpt4-alpaca-lora_mlp-65B-HF\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">TheBloke/gpt4-alpaca-lora_mlp-65B-HF</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_TheBloke__gpt4-alpaca-lora_mlp-65B-HF\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 61.05,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/ajibawa-2023/scarlett-33b\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">ajibawa-2023/scarlett-33b</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_ajibawa-2023__scarlett-33b\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 64.85,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/ehartford/Samantha-1.1-70b\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">ehartford/Samantha-1.1-70b</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_ehartford__Samantha-1.1-70b\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 65.02,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/ehartford/Samantha-1.11-70b\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">ehartford/Samantha-1.11-70b</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_ehartford__Samantha-1.11-70b\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-10-16",
+        "score": 65.81,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/uni-tianyan/Uni-TianYan\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">uni-tianyan/Uni-TianYan</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_uni-tianyan__Uni-TianYan\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-12-07",
+        "score": 72.79,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/DopeorNope/COKAL-v1-70B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">DopeorNope/COKAL-v1-70B</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_DopeorNope__COKAL-v1-70B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-12-18",
+        "score": 76.73,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/Sao10K/SOLAR-10.7B-NahIdWin\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">Sao10K/SOLAR-10.7B-NahIdWin</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_Sao10K__SOLAR-10.7B-NahIdWin\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2024-01-17",
+        "score": 81.5,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/cloudyu/Mixtral_7Bx2_MoE_DPO\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">cloudyu/Mixtral_7Bx2_MoE_DPO</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_cloudyu__Mixtral_7Bx2_MoE_DPO\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2024-03-29",
+        "score": 82.29,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/Contamination/contaminated_proof_7b_v1.0\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">Contamination/contaminated_proof_7b_v1.0</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_Contamination__contaminated_proof_7b_v1.0\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      }
+    ],
+    "Winogrande": [
+      {
+        "date": "2023-07-19",
+        "score": 50.43,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/gpt2\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">gpt2</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_gpt2\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-07-19",
+        "score": 58.25,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/gpt2-xl\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">gpt2-xl</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_gpt2-xl\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-08-25",
+        "score": 72.06,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/bigscience/bloom\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">bigscience/bloom</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_bigscience__bloom\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-08-29",
+        "score": 75.93,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/StudentLLM/Alpagasus-2-13B-QLoRA-pipeline\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">StudentLLM/Alpagasus-2-13B-QLoRA-pipeline</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_StudentLLM__Alpagasus-2-13B-QLoRA-pipeline\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 77.66,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/CalderaAI/30B-Epsilon\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">CalderaAI/30B-Epsilon</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_CalderaAI__30B-Epsilon\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 81.37,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/Aeala/Alpaca-elina-65b\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">Aeala/Alpaca-elina-65b</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_Aeala__Alpaca-elina-65b\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 83.9,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/NousResearch/Nous-Puffin-70B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">NousResearch/Nous-Puffin-70B</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_NousResearch__Nous-Puffin-70B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 83.98,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/TheBloke/llama-2-70b-Guanaco-QLoRA-fp16\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">TheBloke/llama-2-70b-Guanaco-QLoRA-fp16</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_TheBloke__llama-2-70b-Guanaco-QLoRA-fp16\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 84.29,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/augtoma/qCammel-70\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">augtoma/qCammel-70</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_augtoma__qCammel-70\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-15",
+        "score": 86.9,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/tiiuae/falcon-180B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">tiiuae/falcon-180B</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_tiiuae__falcon-180B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2024-01-09",
+        "score": 91.48,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/udkai/Garrulus\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">udkai/Garrulus</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_udkai__Garrulus\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      }
+    ],
+    "GSM8K": [
+      {
+        "date": "2023-07-19",
+        "score": 0.68,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/gpt2\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">gpt2</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_gpt2\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-07-19",
+        "score": 1.29,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/gpt2-xl\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">gpt2-xl</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_gpt2-xl\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-08-25",
+        "score": 6.9,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/bigscience/bloom\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">bigscience/bloom</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_bigscience__bloom\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-08-29",
+        "score": 9.25,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/StudentLLM/Alpagasus-2-13B-QLoRA-pipeline\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">StudentLLM/Alpagasus-2-13B-QLoRA-pipeline</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_StudentLLM__Alpagasus-2-13B-QLoRA-pipeline\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 9.86,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/AlpinDale/pygmalion-instruct\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">AlpinDale/pygmalion-instruct</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_AlpinDale__pygmalion-instruct\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 24.56,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/CalderaAI/30B-Epsilon\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">CalderaAI/30B-Epsilon</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_CalderaAI__30B-Epsilon\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 29.04,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/Aeala/Alpaca-elina-65b\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">Aeala/Alpaca-elina-65b</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_Aeala__Alpaca-elina-65b\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 30.1,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/Aeala/GPT4-x-AlpacaDente-30b\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">Aeala/GPT4-x-AlpacaDente-30b</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_Aeala__GPT4-x-AlpacaDente-30b\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 34.27,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/NousResearch/Nous-Puffin-70B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">NousResearch/Nous-Puffin-70B</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_NousResearch__Nous-Puffin-70B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-09",
+        "score": 43.37,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/OpenBuddy/openbuddy-llama-65b-v8-bf16\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">OpenBuddy/openbuddy-llama-65b-v8-bf16</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_OpenBuddy__openbuddy-llama-65b-v8-bf16\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-09-15",
+        "score": 45.94,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/tiiuae/falcon-180B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">tiiuae/falcon-180B</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_tiiuae__falcon-180B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-10-16",
+        "score": 54.06,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/meta-llama/Llama-2-70b-hf\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">meta-llama/Llama-2-70b-hf</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_meta-llama__Llama-2-70b-hf\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-11-06",
+        "score": 60.27,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/OpenBuddy/openbuddy-llama2-70b-v10.1-bf16\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">OpenBuddy/openbuddy-llama2-70b-v10.1-bf16</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_OpenBuddy__openbuddy-llama2-70b-v10.1-bf16\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-11-17",
+        "score": 60.8,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/chargoddard/Yi-34B-Llama\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">chargoddard/Yi-34B-Llama</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_chargoddard__Yi-34B-Llama\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-11-19",
+        "score": 62.7,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/CausalLM/14B-DPO-alpha\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">CausalLM/14B-DPO-alpha</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_CausalLM__14B-DPO-alpha\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-12-01",
+        "score": 63.68,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/deepseek-ai/deepseek-llm-67b-chat\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">deepseek-ai/deepseek-llm-67b-chat</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_deepseek-ai__deepseek-llm-67b-chat\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-12-01",
+        "score": 72.1,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/CausalLM/72B-preview\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">CausalLM/72B-preview</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_CausalLM__72B-preview\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-12-09",
+        "score": 72.18,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/SUSTech/SUS-Chat-34B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">SUSTech/SUS-Chat-34B</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_SUSTech__SUS-Chat-34B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-12-12",
+        "score": 73.16,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/Toten5/Marcoroni-neural-chat-7B-v2\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">Toten5/Marcoroni-neural-chat-7B-v2</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_Toten5__Marcoroni-neural-chat-7B-v2\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2023-12-31",
+        "score": 73.31,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/samir-fama/FernandoGPT-v1\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">samir-fama/FernandoGPT-v1</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_samir-fama__FernandoGPT-v1\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2024-01-05",
+        "score": 74.6,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/cloudyu/Mixtral_34Bx2_MoE_60B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">cloudyu/Mixtral_34Bx2_MoE_60B</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_cloudyu__Mixtral_34Bx2_MoE_60B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2024-01-08",
+        "score": 75.51,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/cloudyu/Yi-34Bx2-MoE-60B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">cloudyu/Yi-34Bx2-MoE-60B</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_cloudyu__Yi-34Bx2-MoE-60B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2024-01-12",
+        "score": 76.27,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/moreh/MoMo-72B-lora-1.8.4-DPO\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">moreh/MoMo-72B-lora-1.8.4-DPO</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_moreh__MoMo-72B-lora-1.8.4-DPO\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2024-01-16",
+        "score": 76.8,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/moreh/MoMo-72B-lora-1.8.6-DPO\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">moreh/MoMo-72B-lora-1.8.6-DPO</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_moreh__MoMo-72B-lora-1.8.6-DPO\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2024-01-22",
+        "score": 78.62,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/moreh/MoMo-72B-lora-1.8.7-DPO\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">moreh/MoMo-72B-lora-1.8.7-DPO</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_moreh__MoMo-72B-lora-1.8.7-DPO\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2024-02-02",
+        "score": 78.7,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/abacusai/Smaug-70B-v0.1\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">abacusai/Smaug-70B-v0.1</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_abacusai__Smaug-70B-v0.1\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2024-02-04",
+        "score": 79.38,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/binbi/Ein-72B-v0.1\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">binbi/Ein-72B-v0.1</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_binbi__Ein-72B-v0.1\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2024-02-04",
+        "score": 80.06,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/binbi/Ein-72B-v0.1\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">binbi/Ein-72B-v0.1</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_binbi__Ein-72B-v0.1\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2024-04-17",
+        "score": 82.03,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/mistralai/Mixtral-8x22B-Instruct-v0.1\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">mistralai/Mixtral-8x22B-Instruct-v0.1</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_mistralai__Mixtral-8x22B-Instruct-v0.1\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2024-04-18",
+        "score": 85.44,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/meta-llama/Meta-Llama-3-70B-Instruct\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">meta-llama/Meta-Llama-3-70B-Instruct</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_meta-llama__Meta-Llama-3-70B-Instruct\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2024-04-26",
+        "score": 86.05,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/MaziyarPanahi/Llama-3-70B-Instruct-DPO-v0.1\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">MaziyarPanahi/Llama-3-70B-Instruct-DPO-v0.1</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_MaziyarPanahi__Llama-3-70B-Instruct-DPO-v0.1\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2024-04-27",
+        "score": 86.28,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/tenyx/Llama3-TenyxChat-70B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">tenyx/Llama3-TenyxChat-70B</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_tenyx__Llama3-TenyxChat-70B\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      },
+      {
+        "date": "2024-05-01",
+        "score": 88.25,
+        "model": "<a target=\"_blank\" href=\"https://huggingface.co/MaziyarPanahi/Llama-3-70B-Instruct-DPO-v0.2\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">MaziyarPanahi/Llama-3-70B-Instruct-DPO-v0.2</a>  <a target=\"_blank\" href=\"https://huggingface.co/datasets/open-llm-leaderboard/details_MaziyarPanahi__Llama-3-70B-Instruct-DPO-v0.2\" style=\"color: var(--link-text-color); text-decoration: underline;text-decoration-style: dotted;\">📑</a>"
+      }
+    ]
+  }
+}

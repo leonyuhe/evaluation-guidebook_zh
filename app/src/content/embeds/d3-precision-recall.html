@@ -1,0 +1,348 @@
+<div class="d3-precision-recall"></div>
+
+<style>
+  .d3-precision-recall {
+    font-family: var(--default-font-family);
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: var(--spacing-4) 0;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .d3-precision-recall svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .d3-precision-recall .circle {
+    fill: none;
+    stroke-width: 3;
+    opacity: 0.8;
+  }
+
+  .d3-precision-recall .circle-predicted {
+    stroke: #4A90E2;
+    fill: #4A90E2;
+    fill-opacity: 0.15;
+  }
+
+  .d3-precision-recall .circle-relevant {
+    stroke: #F5A623;
+    fill: #F5A623;
+    fill-opacity: 0.15;
+  }
+
+  .d3-precision-recall .intersection {
+    fill: #7ED321;
+    fill-opacity: 0.3;
+  }
+
+  [data-theme="dark"] .d3-precision-recall .circle-predicted {
+    stroke: #5DA9FF;
+    fill: #5DA9FF;
+  }
+
+  [data-theme="dark"] .d3-precision-recall .circle-relevant {
+    stroke: #FFB84D;
+    fill: #FFB84D;
+  }
+
+  [data-theme="dark"] .d3-precision-recall .intersection {
+    fill: #94E842;
+  }
+
+  .d3-precision-recall .label {
+    font-size: 14px;
+    font-weight: 600;
+    fill: var(--text-color);
+  }
+
+  .d3-precision-recall .count-label {
+    font-size: 13px;
+    font-weight: 500;
+    fill: var(--text-color);
+  }
+
+  .d3-precision-recall .formula-text {
+    font-size: 12px;
+    fill: var(--text-color);
+  }
+
+  .d3-precision-recall .formula-box {
+    fill: var(--surface-bg);
+    stroke: var(--border-color);
+    stroke-width: 1;
+  }
+
+  .d3-precision-recall .section-title {
+    font-size: 16px;
+    font-weight: 700;
+    fill: var(--primary-color);
+    text-anchor: middle;
+  }
+
+  .d3-precision-recall .legend-text {
+    font-size: 11px;
+    fill: var(--text-color);
+  }
+
+  .d3-precision-recall .legend-rect {
+    stroke-width: 1.5;
+  }
+</style>
+
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => {
+        if (window.d3 && typeof window.d3.select === 'function') cb();
+      };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-precision-recall'))) {
+        const candidates = Array.from(document.querySelectorAll('.d3-precision-recall'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+
+      if (!container) return;
+
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      const svg = d3.select(container).append('svg');
+      const g = svg.append('g');
+
+      let width = 800;
+      let height = 500;
+
+      function render() {
+        width = container.clientWidth || 800;
+        height = Math.max(400, Math.round(width * 0.5));
+
+        svg.attr('width', width).attr('height', height);
+
+        const margin = { top: 40, right: 40, bottom: 80, left: 40 };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        g.attr('transform', `translate(${margin.left},${margin.top})`);
+        g.selectAll('*').remove();
+
+        // Example: Question answering with exact match
+        const TP = 45;  // True Positives (correct answers identified)
+        const FP = 8;   // False Positives (incorrect marked as correct)
+        const FN = 5;   // False Negatives (correct marked as incorrect)
+
+        const totalPredicted = TP + FP;  // All predicted as correct
+        const totalRelevant = TP + FN;   // All actually correct
+
+        const precision = TP / totalPredicted;
+        const recall = TP / totalRelevant;
+
+        // Circle parameters
+        const radius = Math.min(innerWidth, innerHeight) * 0.25;
+        const overlapOffset = radius * 0.6;
+
+        const predictedX = innerWidth * 0.35;
+        const relevantX = predictedX + overlapOffset;
+        const centerY = innerHeight * 0.4;
+
+        // Title
+        g.append('text')
+          .attr('class', 'section-title')
+          .attr('x', innerWidth / 2)
+          .attr('y', -10)
+          .text('Precision and Recall Visualization');
+
+        // Draw circles
+        g.append('circle')
+          .attr('class', 'circle circle-predicted')
+          .attr('cx', predictedX)
+          .attr('cy', centerY)
+          .attr('r', radius);
+
+        g.append('circle')
+          .attr('class', 'circle circle-relevant')
+          .attr('cx', relevantX)
+          .attr('cy', centerY)
+          .attr('r', radius);
+
+        // Calculate intersection area (approximate)
+        const intersectionX = (predictedX + relevantX) / 2;
+
+        // Draw intersection highlight
+        const clipId = 'clip-intersection-' + Math.random().toString(36).substr(2, 9);
+        const defs = g.append('defs');
+        const clipPath = defs.append('clipPath').attr('id', clipId);
+
+        clipPath.append('circle')
+          .attr('cx', predictedX)
+          .attr('cy', centerY)
+          .attr('r', radius);
+
+        g.append('circle')
+          .attr('class', 'intersection')
+          .attr('cx', relevantX)
+          .attr('cy', centerY)
+          .attr('r', radius)
+          .attr('clip-path', `url(#${clipId})`);
+
+        // Labels for circles
+        g.append('text')
+          .attr('class', 'label')
+          .attr('x', predictedX - radius * 0.7)
+          .attr('y', centerY - radius - 15)
+          .attr('text-anchor', 'middle')
+          .text('Predicted Correct');
+
+        g.append('text')
+          .attr('class', 'label')
+          .attr('x', relevantX + radius * 0.7)
+          .attr('y', centerY - radius - 15)
+          .attr('text-anchor', 'middle')
+          .text('Actually Correct');
+
+        // Count labels inside circles
+        // Left part (FP)
+        g.append('text')
+          .attr('class', 'count-label')
+          .attr('x', predictedX - radius * 0.5)
+          .attr('y', centerY)
+          .attr('text-anchor', 'middle')
+          .attr('fill', '#4A90E2')
+          .text(`FP: ${FP}`);
+
+        // Intersection (TP)
+        g.append('text')
+          .attr('class', 'count-label')
+          .attr('x', intersectionX)
+          .attr('y', centerY)
+          .attr('text-anchor', 'middle')
+          .attr('fill', '#7ED321')
+          .style('font-weight', '700')
+          .text(`TP: ${TP}`);
+
+        // Right part (FN)
+        g.append('text')
+          .attr('class', 'count-label')
+          .attr('x', relevantX + radius * 0.5)
+          .attr('y', centerY)
+          .attr('text-anchor', 'middle')
+          .attr('fill', '#F5A623')
+          .text(`FN: ${FN}`);
+
+        // Formula boxes at bottom
+        const formulaY = centerY + radius + 60;
+        const boxWidth = Math.min(200, innerWidth * 0.35);
+        const boxHeight = 80;
+        const boxGap = 40;
+
+        const precisionX = innerWidth * 0.3 - boxWidth / 2;
+        const recallX = innerWidth * 0.7 - boxWidth / 2;
+
+        // Precision box
+        g.append('rect')
+          .attr('class', 'formula-box')
+          .attr('x', precisionX)
+          .attr('y', formulaY - boxHeight / 2)
+          .attr('width', boxWidth)
+          .attr('height', boxHeight)
+          .attr('rx', 8);
+
+        g.append('text')
+          .attr('class', 'label')
+          .attr('x', precisionX + boxWidth / 2)
+          .attr('y', formulaY - boxHeight / 2 + 20)
+          .attr('text-anchor', 'middle')
+          .attr('fill', '#4A90E2')
+          .text('Precision');
+
+        g.append('text')
+          .attr('class', 'formula-text')
+          .attr('x', precisionX + boxWidth / 2)
+          .attr('y', formulaY - boxHeight / 2 + 40)
+          .attr('text-anchor', 'middle')
+          .text(`TP / (TP + FP) = ${TP} / ${totalPredicted}`);
+
+        g.append('text')
+          .attr('class', 'formula-text')
+          .attr('x', precisionX + boxWidth / 2)
+          .attr('y', formulaY - boxHeight / 2 + 60)
+          .attr('text-anchor', 'middle')
+          .style('font-weight', '700')
+          .style('font-size', '16px')
+          .attr('fill', '#4A90E2')
+          .text(`= ${(precision * 100).toFixed(1)}%`);
+
+        // Recall box
+        g.append('rect')
+          .attr('class', 'formula-box')
+          .attr('x', recallX)
+          .attr('y', formulaY - boxHeight / 2)
+          .attr('width', boxWidth)
+          .attr('height', boxHeight)
+          .attr('rx', 8);
+
+        g.append('text')
+          .attr('class', 'label')
+          .attr('x', recallX + boxWidth / 2)
+          .attr('y', formulaY - boxHeight / 2 + 20)
+          .attr('text-anchor', 'middle')
+          .attr('fill', '#F5A623')
+          .text('Recall');
+
+        g.append('text')
+          .attr('class', 'formula-text')
+          .attr('x', recallX + boxWidth / 2)
+          .attr('y', formulaY - boxHeight / 2 + 40)
+          .attr('text-anchor', 'middle')
+          .text(`TP / (TP + FN) = ${TP} / ${totalRelevant}`);
+
+        g.append('text')
+          .attr('class', 'formula-text')
+          .attr('x', recallX + boxWidth / 2)
+          .attr('y', formulaY - boxHeight / 2 + 60)
+          .attr('text-anchor', 'middle')
+          .style('font-weight', '700')
+          .style('font-size', '16px')
+          .attr('fill', '#F5A623')
+          .text(`= ${(recall * 100).toFixed(1)}%`);
+      }
+
+      render();
+
+      // Responsive handling
+      if (window.ResizeObserver) {
+        const ro = new ResizeObserver(() => render());
+        ro.observe(container);
+      } else {
+        window.addEventListener('resize', render);
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    } else {
+      ensureD3(bootstrap);
+    }
+  })();
+</script>
